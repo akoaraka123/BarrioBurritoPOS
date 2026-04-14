@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,7 +49,21 @@ fun PosScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Barrio Burrito POS", fontWeight = FontWeight.Bold) },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Logo icon using Material Icons - safe and professional
+                        Icon(
+                            imageVector = Icons.Default.ShoppingCart,
+                            contentDescription = "Barrio Burrito Logo",
+                            tint = accentRed,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text("Barrio Burrito POS", fontWeight = FontWeight.Bold)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = backgroundColor
                 )
