@@ -7,6 +7,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,10 +30,14 @@ val darkText = Color(0xFF3D3D3D)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsScreen(
-    report: DailyReport?,
-    transactions: List<OrderEntity>,
-    currency: String = "₱"
+    dailyReports: List<DailyReportWithDate>,
+    selectedTransactions: List<OrderEntity>,
+    currency: String = "₱",
+    onViewTransactions: (Long) -> Unit = {}
 ) {
+    var showTransactionsDialog by remember { mutableStateOf(false) }
+    var selectedDate by remember { mutableStateOf("") }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -45,93 +53,157 @@ fun ReportsScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            // Summary cards
+            if (dailyReports.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No sales data yet", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(dailyReports) { dailyReport ->
+                        DailyReportCard(
+                            dailyReport = dailyReport,
+                            currency = currency,
+                            onViewTransactions = {
+                                selectedDate = dailyReport.date
+                                showTransactionsDialog = true
+                                onViewTransactions(dailyReport.dateMillis)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showTransactionsDialog) {
+        TransactionsDialog(
+            date = selectedDate,
+            transactions = selectedTransactions,
+            currency = currency,
+            onDismiss = { showTransactionsDialog = false }
+        )
+    }
+}
+
+@Composable
+fun DailyReportCard(
+    dailyReport: DailyReportWithDate,
+    currency: String,
+    onViewTransactions: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = dailyReport.date,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = darkText
+                )
+                Button(
+                    onClick = onViewTransactions,
+                    colors = ButtonDefaults.buttonColors(containerColor = accentRed)
+                ) {
+                    Text("View Transactions")
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                SummaryCard(
+                MiniSummaryCard(
                     title = "Total Sales",
-                    value = report?.let { currency + "%.2f".format(it.totalSales) } ?: (currency + "0.00"),
+                    value = currency + "%.2f".format(dailyReport.report.totalSales),
                     color = accentRed,
                     modifier = Modifier.weight(1f)
                 )
-                SummaryCard(
+                MiniSummaryCard(
                     title = "Orders",
-                    value = "${report?.totalOrders ?: 0}",
+                    value = "${dailyReport.report.totalOrders}",
                     color = accentYellow,
                     modifier = Modifier.weight(1f)
                 )
-                SummaryCard(
+                MiniSummaryCard(
                     title = "Items Sold",
-                    value = "${report?.totalItemsSold ?: 0}",
-                    color = Color(0xFF2E7D32),
+                    value = "${dailyReport.report.totalItemsSold}",
+                    color = Color(0xFF9C27B0),
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Best sellers
-            Text(
-                text = "Best Sellers Today",
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
-                color = darkText
-            )
-            Spacer(Modifier.height(8.dp))
-
-            if (report?.bestSellers.isNullOrEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = cardColor),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = "No sales data yet",
-                        modifier = Modifier.padding(16.dp),
-                        color = Color.Gray
-                    )
-                }
-            } else {
-                report?.bestSellers?.forEach { seller ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = cardColor),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(seller.productName, fontWeight = FontWeight.Bold)
-                            Text("${seller.totalQty} sold", color = accentRed)
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MiniSummaryCard(
+                    title = "Cash Sales",
+                    value = currency + "%.2f".format(dailyReport.report.cashSales),
+                    color = Color(0xFF2E7D32),
+                    modifier = Modifier.weight(1f)
+                )
+                MiniSummaryCard(
+                    title = "GCash Sales",
+                    value = currency + "%.2f".format(dailyReport.report.gcashSales),
+                    color = Color(0xFF0077B6),
+                    modifier = Modifier.weight(1f)
+                )
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            // Today's transactions
-            Text(
-                text = "Today's Transactions",
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
-                color = darkText
-            )
-            Spacer(Modifier.height(8.dp))
-
-            if (transactions.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No transactions today", color = Color.Gray)
+            if (dailyReport.report.bestSellers.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Best Sellers",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = darkText
+                )
+                Spacer(Modifier.height(4.dp))
+                dailyReport.report.bestSellers.take(3).forEach { seller ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(seller.productName, style = MaterialTheme.typography.bodySmall)
+                        Text("${seller.totalQty} sold", color = accentRed, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TransactionsDialog(
+    date: String,
+    transactions: List<OrderEntity>,
+    currency: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Transactions - $date") },
+        text = {
+            if (transactions.isEmpty()) {
+                Text("No transactions")
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(transactions) { order ->
@@ -139,6 +211,42 @@ fun ReportsScreen(
                     }
                 }
             }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
+@Composable
+fun MiniSummaryCard(
+    title: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.15f)),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.DarkGray
+            )
+            Text(
+                text = value,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyMedium,
+                color = color
+            )
         }
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.barrioburritopos.data.local.dao.OrderDao
 import com.example.barrioburritopos.data.local.dao.ProductDao
@@ -16,7 +17,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [ProductEntity::class, OrderEntity::class, OrderItemEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class BarrioBurritoDatabase : RoomDatabase() {
@@ -24,6 +25,14 @@ abstract class BarrioBurritoDatabase : RoomDatabase() {
     abstract fun orderDao(): OrderDao
 
     companion object {
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE orders ADD COLUMN paymentMethod TEXT NOT NULL DEFAULT 'CASH'")
+                db.execSQL("ALTER TABLE orders ADD COLUMN amountReceived REAL")
+                db.execSQL("ALTER TABLE orders ADD COLUMN changeAmount REAL NOT NULL DEFAULT 0.0")
+            }
+        }
+
         @Volatile
         private var INSTANCE: BarrioBurritoDatabase? = null
 
@@ -34,6 +43,7 @@ abstract class BarrioBurritoDatabase : RoomDatabase() {
                     BarrioBurritoDatabase::class.java,
                     "barrio_burrito_db"
                 )
+                    .addMigrations(MIGRATION_1_2)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)

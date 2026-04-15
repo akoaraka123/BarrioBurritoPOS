@@ -11,6 +11,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
@@ -57,41 +60,45 @@ fun AppNavigation(
     historyViewModel: com.example.barrioburritopos.feature.history.HistoryViewModel,
     reportsViewModel: com.example.barrioburritopos.feature.reports.ReportsViewModel,
     settingsViewModel: com.example.barrioburritopos.feature.settings.SettingsViewModel,
-    currency: String
+    currency: String,
+    productRepo: com.example.barrioburritopos.data.repository.ProductRepository
 ) {
     val navController = rememberNavController()
+    var showNavBar by remember { mutableStateOf(true) }
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = navBarColor,
-                tonalElevation = 0.dp
-            ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
+            if (showNavBar) {
+                NavigationBar(
+                    containerColor = navBarColor,
+                    tonalElevation = 0.dp
+                ) {
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentRoute = navBackStackEntry?.destination?.route
 
-                screens.forEach { screen ->
-                    NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.title) },
-                        label = { Text(screen.title) },
-                        selected = currentRoute == screen.route,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
+                    screens.forEach { screen ->
+                        NavigationBarItem(
+                            icon = { Icon(screen.icon, contentDescription = screen.title) },
+                            label = { Text(screen.title) },
+                            selected = currentRoute == screen.route,
+                            onClick = {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = navSelectedColor,
-                            selectedTextColor = navSelectedColor,
-                            unselectedIconColor = navUnselectedColor,
-                            unselectedTextColor = navUnselectedColor,
-                            indicatorColor = Color(0xFFFFE8CC)
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = navSelectedColor,
+                                selectedTextColor = navSelectedColor,
+                                unselectedIconColor = navUnselectedColor,
+                                unselectedTextColor = navUnselectedColor,
+                                indicatorColor = Color(0xFFFFE8CC)
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -102,26 +109,36 @@ fun AppNavigation(
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(Screen.Pos.route) {
-                val products by posViewModel.products.collectAsStateWithLifecycle()
+                val products by posViewModel.filteredProducts.collectAsStateWithLifecycle()
+                val searchQuery by posViewModel.searchQuery.collectAsStateWithLifecycle()
                 val cart by posViewModel.cart.collectAsStateWithLifecycle()
                 val total by posViewModel.total.collectAsStateWithLifecycle()
                 val cashReceived by posViewModel.cashReceived.collectAsStateWithLifecycle()
+                val paymentMethod by posViewModel.paymentMethod.collectAsStateWithLifecycle()
                 val change by posViewModel.change.collectAsStateWithLifecycle()
+                val isCheckoutAllowed by posViewModel.isCheckoutAllowed.collectAsStateWithLifecycle()
                 val checkoutStatus by posViewModel.checkoutStatus.collectAsStateWithLifecycle()
 
                 PosScreen(
                     products = products,
                     cart = cart,
                     total = total,
+                    paymentMethod = paymentMethod,
                     cashReceived = cashReceived,
                     change = change,
+                    isCheckoutAllowed = isCheckoutAllowed,
                     checkoutStatus = checkoutStatus,
                     currency = currency,
+                    showNavBar = showNavBar,
+                    onToggleNavBar = { showNavBar = !showNavBar },
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = posViewModel::onSearchQueryChange,
                     onAddToCart = posViewModel::addToCart,
                     onIncreaseQty = posViewModel::increaseQuantity,
                     onDecreaseQty = posViewModel::decreaseQuantity,
                     onRemoveFromCart = posViewModel::removeFromCart,
                     onClearCart = posViewModel::clearCart,
+                    onPaymentMethodChange = posViewModel::onPaymentMethodChange,
                     onCashChange = posViewModel::onCashReceivedChange,
                     onCheckout = posViewModel::checkout,
                     onResetCheckout = posViewModel::resetCheckoutStatus
@@ -130,12 +147,16 @@ fun AppNavigation(
             composable(Screen.History.route) {
                 val transactions by historyViewModel.filteredTransactions.collectAsStateWithLifecycle()
                 val searchQuery by historyViewModel.searchQuery.collectAsStateWithLifecycle()
+                val products by historyViewModel.products.collectAsStateWithLifecycle()
 
                 HistoryScreen(
                     transactions = transactions,
                     searchQuery = searchQuery,
                     currency = currency,
-                    onSearchChange = historyViewModel::onSearchChange
+                    onSearchChange = historyViewModel::onSearchChange,
+                    onEditOrder = historyViewModel::editOrder,
+                    onDeleteOrder = historyViewModel::deleteOrder,
+                    products = products
                 )
             }
             composable(Screen.Inventory.route) {
@@ -149,37 +170,32 @@ fun AppNavigation(
                     onAddProduct = inventoryViewModel::addProduct,
                     onToggleAvailability = inventoryViewModel::toggleAvailability,
                     onRestock = inventoryViewModel::restock,
-                    onDelete = inventoryViewModel::deleteProduct
+                    onDelete = inventoryViewModel::deleteProduct,
+                    onUpdateProduct = inventoryViewModel::updateProduct
                 )
             }
             composable(Screen.Reports.route) {
-                val report by reportsViewModel.todayReport.collectAsStateWithLifecycle()
-                val transactions by reportsViewModel.todayTransactions.collectAsStateWithLifecycle()
+                val dailyReports by reportsViewModel.dailyReports.collectAsStateWithLifecycle()
+                val selectedDayTransactions by reportsViewModel.selectedDayTransactions.collectAsStateWithLifecycle()
 
                 ReportsScreen(
-                    report = report,
-                    transactions = transactions,
-                    currency = currency
+                    dailyReports = dailyReports,
+                    selectedTransactions = selectedDayTransactions,
+                    currency = currency,
+                    onViewTransactions = { dateMillis ->
+                        reportsViewModel.loadTransactionsForDay(dateMillis)
+                    }
                 )
             }
             composable(Screen.Settings.route) {
                 val businessName by settingsViewModel.businessName.collectAsStateWithLifecycle()
                 val currencySetting by settingsViewModel.currency.collectAsStateWithLifecycle()
-                val lowStockThreshold by settingsViewModel.lowStockThreshold.collectAsStateWithLifecycle()
 
-                val scope = androidx.compose.runtime.rememberCoroutineScope()
                 SettingsScreen(
                     businessName = businessName,
                     currency = currencySetting,
-                    lowStockThreshold = lowStockThreshold,
                     onBusinessNameChange = settingsViewModel::setBusinessName,
-                    onCurrencyChange = settingsViewModel::setCurrency,
-                    onLowStockChange = settingsViewModel::setLowStockThreshold,
-                    onClearTransactions = {
-                        scope.launch {
-                            settingsViewModel.clearAllTransactions()
-                        }
-                    }
+                    onCurrencyChange = settingsViewModel::setCurrency
                 )
             }
         }

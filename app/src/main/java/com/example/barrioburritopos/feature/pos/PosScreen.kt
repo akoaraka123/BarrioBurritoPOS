@@ -1,14 +1,21 @@
 package com.example.barrioburritopos.feature.pos
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,8 +23,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.barrioburritopos.R
 import com.example.barrioburritopos.data.local.entity.ProductEntity
 import com.example.barrioburritopos.domain.model.CartItem
+import com.example.barrioburritopos.feature.pos.PaymentMethod
 
 // Warm Mexican street food colors
 val backgroundColor = Color(0xFFFFF8F0)
@@ -33,15 +42,22 @@ fun PosScreen(
     products: List<ProductEntity>,
     cart: List<CartItem>,
     total: Double,
+    paymentMethod: PaymentMethod,
     cashReceived: String,
     change: Double,
+    isCheckoutAllowed: Boolean,
     checkoutStatus: CheckoutStatus?,
     currency: String = "₱",
+    showNavBar: Boolean = true,
+    onToggleNavBar: () -> Unit = {},
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
     onAddToCart: (ProductEntity) -> Unit,
     onIncreaseQty: (Long) -> Unit,
     onDecreaseQty: (Long) -> Unit,
     onRemoveFromCart: (Long) -> Unit,
     onClearCart: () -> Unit,
+    onPaymentMethodChange: (PaymentMethod) -> Unit,
     onCashChange: (String) -> Unit,
     onCheckout: () -> Unit,
     onResetCheckout: () -> Unit
@@ -51,17 +67,28 @@ fun PosScreen(
             TopAppBar(
                 title = {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Logo icon using Material Icons - safe and professional
-                        Icon(
-                            imageVector = Icons.Default.ShoppingCart,
+                        Image(
+                            painter = painterResource(id = R.drawable.logo),
                             contentDescription = "Barrio Burrito Logo",
-                            tint = accentRed,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier
+                                .height(40.dp)
+                                .width(40.dp)
+                                .padding(end = 8.dp)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
                         Text("Barrio Burrito POS", fontWeight = FontWeight.Bold)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onToggleNavBar) {
+                        Icon(
+                            imageVector = if (showNavBar) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (showNavBar) "Hide navigation bar" else "Show navigation bar",
+                            tint = accentRed
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -75,32 +102,37 @@ fun PosScreen(
                 .fillMaxSize()
                 .background(backgroundColor)
                 .padding(padding)
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Left: Menu
             MenuPanel(
                 products = products,
+                searchQuery = searchQuery,
+                onSearchQueryChange = onSearchQueryChange,
                 onAddToCart = onAddToCart,
-                modifier = Modifier.weight(1.3f)
+                modifier = Modifier.weight(1.5f)
             )
 
             // Right: Order/Cart
             OrderPanel(
                 cart = cart,
                 total = total,
+                paymentMethod = paymentMethod,
                 cashReceived = cashReceived,
                 change = change,
+                isCheckoutAllowed = isCheckoutAllowed,
                 checkoutStatus = checkoutStatus,
                 currency = currency,
                 onIncreaseQty = onIncreaseQty,
                 onDecreaseQty = onDecreaseQty,
                 onRemove = onRemoveFromCart,
                 onClear = onClearCart,
+                onPaymentMethodChange = onPaymentMethodChange,
                 onCashChange = onCashChange,
                 onCheckout = onCheckout,
                 onResetCheckout = onResetCheckout,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1.2f)
             )
         }
     }
@@ -109,6 +141,8 @@ fun PosScreen(
 @Composable
 fun MenuPanel(
     products: List<ProductEntity>,
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
     onAddToCart: (ProductEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -118,6 +152,23 @@ fun MenuPanel(
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = darkText
+        )
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Search products...") },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = "Search", tint = accentRed)
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = accentRed,
+                unfocusedBorderColor = Color.Gray
+            )
         )
         Spacer(Modifier.height(12.dp))
 
@@ -189,14 +240,17 @@ fun ProductCard(
 fun OrderPanel(
     cart: List<CartItem>,
     total: Double,
+    paymentMethod: PaymentMethod,
     cashReceived: String,
     change: Double,
+    isCheckoutAllowed: Boolean,
     checkoutStatus: CheckoutStatus?,
     currency: String,
     onIncreaseQty: (Long) -> Unit,
     onDecreaseQty: (Long) -> Unit,
     onRemove: (Long) -> Unit,
     onClear: () -> Unit,
+    onPaymentMethodChange: (PaymentMethod) -> Unit,
     onCashChange: (String) -> Unit,
     onCheckout: () -> Unit,
     onResetCheckout: () -> Unit,
@@ -234,11 +288,14 @@ fun OrderPanel(
                     )
                 }
             } else {
-                LazyColumn(
+                Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    items(cart) { item ->
+                    cart.forEach { item ->
                         CartItemRow(
                             item = item,
                             currency = currency,
@@ -250,9 +307,9 @@ fun OrderPanel(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
             // Total
             Row(
@@ -268,37 +325,85 @@ fun OrderPanel(
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
 
-            // Cash input
-            OutlinedTextField(
-                value = cashReceived,
-                onValueChange = onCashChange,
-                label = { Text("Cash Received") },
-                prefix = { Text(currency) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+            // Payment method selector
+            Text(
+                text = "Payment Method",
+                fontWeight = FontWeight.Bold,
+                color = darkText
             )
+            Spacer(Modifier.height(6.dp))
 
-            // Change
-            if (change > 0) {
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = paymentMethod == PaymentMethod.CASH,
+                    onClick = { onPaymentMethodChange(PaymentMethod.CASH) },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    modifier = Modifier.height(36.dp)
                 ) {
-                    Text("Change:", fontWeight = FontWeight.Bold, color = darkText)
-                    Text(
-                        "$currency${"%.2f".format(change)}",
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2E7D32),
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Text("Cash", style = MaterialTheme.typography.bodyMedium)
+                }
+                SegmentedButton(
+                    selected = paymentMethod == PaymentMethod.GCASH,
+                    onClick = { onPaymentMethodChange(PaymentMethod.GCASH) },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("GCash", style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
+
+            // Amount received (Cash only)
+            if (paymentMethod == PaymentMethod.CASH) {
+                val received = cashReceived.toDoubleOrNull()
+                val showInsufficient = cart.isNotEmpty() && (received == null || received < total)
+
+                OutlinedTextField(
+                    value = cashReceived,
+                    onValueChange = onCashChange,
+                    label = { Text("Amount Received") },
+                    prefix = { Text(currency) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    isError = showInsufficient
+                )
+
+                if (showInsufficient) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Insufficient payment",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            } else {
+                Text(
+                    text = "Cashless payment - no change needed",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+
+            // Change
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Change:", fontWeight = FontWeight.Bold, color = darkText)
+                Text(
+                    "$currency${"%.2f".format(change)}",
+                    fontWeight = FontWeight.Bold,
+                    color = if (change > 0) Color(0xFF2E7D32) else Color.Gray,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
 
             // Buttons
             Row(
@@ -316,6 +421,7 @@ fun OrderPanel(
                 Button(
                     onClick = onCheckout,
                     modifier = Modifier.weight(1f),
+                    enabled = isCheckoutAllowed,
                     colors = ButtonDefaults.buttonColors(containerColor = accentYellow),
                     shape = RoundedCornerShape(12.dp)
                 ) {

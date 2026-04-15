@@ -7,6 +7,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,9 +34,11 @@ fun InventoryScreen(
     onAddProduct: (String, Double, Int, String?) -> Unit,
     onToggleAvailability: (ProductEntity) -> Unit,
     onRestock: (Long, Int) -> Unit,
-    onDelete: (ProductEntity) -> Unit
+    onDelete: (ProductEntity) -> Unit,
+    onUpdateProduct: (ProductEntity) -> Unit = {}
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf<ProductEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -100,7 +105,8 @@ fun InventoryScreen(
                             isLowStock = lowStockProducts.any { it.id == product.id },
                             onToggle = { onToggleAvailability(product) },
                             onRestock = { onRestock(product.id, it) },
-                            onDelete = { onDelete(product) }
+                            onDelete = { onDelete(product) },
+                            onEdit = { showEditDialog = product }
                         )
                     }
                 }
@@ -117,6 +123,17 @@ fun InventoryScreen(
             }
         )
     }
+
+    showEditDialog?.let { product ->
+        EditProductDialog(
+            product = product,
+            onDismiss = { showEditDialog = null },
+            onUpdate = { updatedProduct ->
+                onUpdateProduct(updatedProduct)
+                showEditDialog = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -126,10 +143,12 @@ fun ProductInventoryCard(
     isLowStock: Boolean,
     onToggle: () -> Unit,
     onRestock: (Int) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: () -> Unit
 ) {
     var showRestock by remember { mutableStateOf(false) }
     var restockAmount by remember { mutableStateOf("10") }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -180,6 +199,12 @@ fun ProductInventoryCard(
                             Text("Restock", color = accentRed)
                         }
                     }
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = accentRed)
+                    }
+                    IconButton(onClick = { showDeleteConfirm = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                    }
                 }
             }
         }
@@ -207,6 +232,30 @@ fun ProductInventoryCard(
             },
             dismissButton = {
                 TextButton(onClick = { showRestock = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Product") },
+            text = { Text("Are you sure you want to delete ${product.name}? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDelete()
+                        showDeleteConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
                     Text("Cancel")
                 }
             }
@@ -268,6 +317,70 @@ fun AddProductDialog(
                 enabled = name.isNotBlank() && price.isNotBlank()
             ) {
                 Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+fun EditProductDialog(
+    product: ProductEntity,
+    onDismiss: () -> Unit,
+    onUpdate: (ProductEntity) -> Unit
+) {
+    var name by remember { mutableStateOf(product.name) }
+    var price by remember { mutableStateOf(product.price.toString()) }
+    var stock by remember { mutableStateOf(product.stockQuantity.toString()) }
+    var category by remember { mutableStateOf(product.category ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Product") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it },
+                    label = { Text("Price") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = stock,
+                    onValueChange = { stock = it },
+                    label = { Text("Stock") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = category,
+                    onValueChange = { category = it },
+                    label = { Text("Category (optional)") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val updatedProduct = product.copy(
+                        name = name,
+                        price = price.toDoubleOrNull() ?: product.price,
+                        stockQuantity = stock.toIntOrNull() ?: product.stockQuantity,
+                        category = category.takeIf { it.isNotBlank() }
+                    )
+                    onUpdate(updatedProduct)
+                },
+                enabled = name.isNotBlank() && price.isNotBlank()
+            ) {
+                Text("Update")
             }
         },
         dismissButton = {

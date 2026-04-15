@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
         InventoryViewModel.factory(productRepo)
     }
     private val historyViewModel by viewModels<HistoryViewModel> {
-        HistoryViewModel.factory(orderRepo)
+        HistoryViewModel.factory(orderRepo, productRepo)
     }
     private val reportsViewModel by viewModels<ReportsViewModel> {
         ReportsViewModel.factory(orderRepo)
@@ -65,7 +65,8 @@ class MainActivity : ComponentActivity() {
                     historyViewModel = historyViewModel,
                     reportsViewModel = reportsViewModel,
                     settingsViewModel = settingsViewModel,
-                    currency = currency
+                    currency = currency,
+                    productRepo = productRepo
                 )
             }
         }

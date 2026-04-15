@@ -22,11 +22,29 @@ interface OrderDao {
     @Insert
     suspend fun insertItems(items: List<OrderItemEntity>)
 
+    @Update
+    suspend fun updateOrder(order: OrderEntity)
+
+    @Update
+    suspend fun updateOrderItem(item: OrderItemEntity)
+
+    @Query("DELETE FROM order_items WHERE orderId = :orderId")
+    suspend fun deleteItemsForOrder(orderId: Long)
+
     @Query("SELECT * FROM order_items WHERE orderId = :orderId")
     suspend fun getItemsForOrder(orderId: Long): List<OrderItemEntity>
 
     @Query("SELECT SUM(totalAmount) FROM orders WHERE dateTime >= :startOfDay AND dateTime < :endOfDay")
     suspend fun getTodaySalesTotal(startOfDay: Long, endOfDay: Long): Double?
+
+    @Query(
+        "SELECT SUM(totalAmount) FROM orders WHERE dateTime >= :startOfDay AND dateTime < :endOfDay AND paymentMethod = :paymentMethod"
+    )
+    suspend fun getTodaySalesTotalByPaymentMethod(
+        startOfDay: Long,
+        endOfDay: Long,
+        paymentMethod: String
+    ): Double?
 
     @Query("SELECT COUNT(*) FROM orders WHERE dateTime >= :startOfDay AND dateTime < :endOfDay")
     suspend fun getTodayOrderCount(startOfDay: Long, endOfDay: Long): Int
@@ -47,6 +65,9 @@ interface OrderDao {
 
     @Query("DELETE FROM orders")
     suspend fun deleteAll()
+
+    @Query("DELETE FROM orders WHERE id = :orderId")
+    suspend fun deleteById(orderId: Long)
 }
 
 data class BestSeller(

@@ -9,5 +9,8 @@ data class OrderEntity(
     val id: Long = 0,
     val dateTime: Long, // epoch millis
     val totalAmount: Double,
-    val totalItems: Int
+    val totalItems: Int,
+    val paymentMethod: String = "CASH",
+    val amountReceived: Double? = null,
+    val changeAmount: Double = 0.0
 )

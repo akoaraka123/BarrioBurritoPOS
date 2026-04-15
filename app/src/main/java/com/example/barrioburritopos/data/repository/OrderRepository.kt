@@ -17,7 +17,20 @@ class OrderRepository(private val orderDao: OrderDao) {
         orderDao.insertItems(itemsWithId)
         return orderId
     }
+    suspend fun updateOrder(order: OrderEntity, items: List<OrderItemEntity>) {
+        orderDao.updateOrder(order)
+        orderDao.deleteItemsForOrder(order.id)
+        val itemsWithId = items.map { it.copy(orderId = order.id) }
+        orderDao.insertItems(itemsWithId)
+    }
+
+    suspend fun delete(orderId: Long) {
+        orderDao.deleteItemsForOrder(orderId)
+        orderDao.deleteById(orderId)
+    }
     suspend fun getTodaySalesTotal(start: Long, end: Long): Double = orderDao.getTodaySalesTotal(start, end) ?: 0.0
+    suspend fun getTodaySalesTotalByPaymentMethod(start: Long, end: Long, paymentMethod: String): Double =
+        orderDao.getTodaySalesTotalByPaymentMethod(start, end, paymentMethod) ?: 0.0
     suspend fun getTodayOrderCount(start: Long, end: Long): Int = orderDao.getTodayOrderCount(start, end)
     suspend fun getTodayItemsSold(start: Long, end: Long): Int = orderDao.getTodayItemsSold(start, end) ?: 0
     suspend fun getBestSellingItems(start: Long, end: Long, limit: Int): List<BestSeller> = orderDao.getBestSellingItems(start, end, limit)

@@ -8,5 +8,8 @@ data class Transaction(
     val dateTimeFormatted: String,
     val items: List<OrderItemEntity>,
     val totalAmount: Double,
-    val totalItems: Int
+    val totalItems: Int,
+    val paymentMethod: String,
+    val amountReceived: Double?,
+    val changeAmount: Double
 )
