@@ -1,6 +1,8 @@
 package com.example.barrioburritopos.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
@@ -51,6 +53,7 @@ val screens = listOf(
 val navBarColor = Color(0xFFFFF8F0)
 val navSelectedColor = Color(0xFFC94F2D)
 val navUnselectedColor = Color(0xFF888888)
+val navTextColorBlock = Color(0xFFFFE8CC)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +82,12 @@ fun AppNavigation(
                     screens.forEach { screen ->
                         NavigationBarItem(
                             icon = { Icon(screen.icon, contentDescription = screen.title) },
-                            label = { Text(screen.title) },
+                            label = { 
+                                Text(
+                                    screen.title,
+                                    modifier = Modifier.background(navTextColorBlock, shape = RoundedCornerShape(4.dp)).padding(4.dp, 2.dp)
+                                )
+                            },
                             selected = currentRoute == screen.route,
                             onClick = {
                                 navController.navigate(screen.route) {
@@ -190,12 +198,16 @@ fun AppNavigation(
             composable(Screen.Settings.route) {
                 val businessName by settingsViewModel.businessName.collectAsStateWithLifecycle()
                 val currencySetting by settingsViewModel.currency.collectAsStateWithLifecycle()
+                val pin by settingsViewModel.pin.collectAsStateWithLifecycle()
 
                 SettingsScreen(
                     businessName = businessName,
                     currency = currencySetting,
                     onBusinessNameChange = settingsViewModel::setBusinessName,
-                    onCurrencyChange = settingsViewModel::setCurrency
+                    onCurrencyChange = settingsViewModel::setCurrency,
+                    hasPin = pin != null,
+                    onSetPin = settingsViewModel::setPin,
+                    onClearPin = settingsViewModel::clearPin
                 )
             }
         }

@@ -46,7 +46,7 @@ fun HistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Order History", fontWeight = FontWeight.Bold) },
+                title = { Text("Order History", fontWeight = FontWeight.Bold, color = Color.Black) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor),
                 actions = {
                     IconButton(onClick = { isLocked = !isLocked }) {
@@ -196,7 +196,8 @@ fun TransactionCard(
                 ) {
                     Text(
                         text = "${item.productName} × ${item.quantity}",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = accentRed
                     )
                     Text(
                         text = "$currency${"%.2f".format(item.subtotal)}",

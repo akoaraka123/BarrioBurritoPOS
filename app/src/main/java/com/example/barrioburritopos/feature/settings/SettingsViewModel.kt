@@ -23,6 +23,7 @@ class SettingsViewModel(
     private val BUSINESS_NAME = stringPreferencesKey("business_name")
     private val CURRENCY = stringPreferencesKey("currency")
     private val LOW_STOCK_THRESHOLD = intPreferencesKey("low_stock_threshold")
+    private val PIN = stringPreferencesKey("pin")
 
     val businessName: StateFlow<String> = dataStore.data
         .map { it[BUSINESS_NAME] ?: "Barrio Burrito" }
@@ -35,6 +36,10 @@ class SettingsViewModel(
     val lowStockThreshold: StateFlow<Int> = dataStore.data
         .map { it[LOW_STOCK_THRESHOLD] ?: 10 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 10)
+
+    val pin: StateFlow<String?> = dataStore.data
+        .map { it[PIN] }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun setBusinessName(name: String) {
         viewModelScope.launch {
@@ -52,6 +57,22 @@ class SettingsViewModel(
         viewModelScope.launch {
             dataStore.edit { it[LOW_STOCK_THRESHOLD] = threshold }
         }
+    }
+
+    fun setPin(newPin: String) {
+        viewModelScope.launch {
+            dataStore.edit { it[PIN] = newPin }
+        }
+    }
+
+    fun clearPin() {
+        viewModelScope.launch {
+            dataStore.edit { it.remove(PIN) }
+        }
+    }
+
+    fun validatePin(inputPin: String): Boolean {
+        return pin.value == inputPin
     }
 
     suspend fun clearAllTransactions() {

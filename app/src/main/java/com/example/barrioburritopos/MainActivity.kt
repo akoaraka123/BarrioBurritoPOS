@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -15,6 +16,7 @@ import com.example.barrioburritopos.feature.history.HistoryViewModel
 import com.example.barrioburritopos.feature.inventory.InventoryViewModel
 import com.example.barrioburritopos.feature.pos.PosViewModel
 import com.example.barrioburritopos.feature.reports.ReportsViewModel
+import com.example.barrioburritopos.feature.settings.PinDialog
 import com.example.barrioburritopos.feature.settings.SettingsViewModel
 import com.example.barrioburritopos.navigation.AppNavigation
 import com.example.barrioburritopos.ui.theme.BarrioBurritoPOSTheme
@@ -59,15 +61,58 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             BarrioBurritoPOSTheme {
-                AppNavigation(
-                    posViewModel = posViewModel,
-                    inventoryViewModel = inventoryViewModel,
-                    historyViewModel = historyViewModel,
-                    reportsViewModel = reportsViewModel,
-                    settingsViewModel = settingsViewModel,
-                    currency = currency,
-                    productRepo = productRepo
-                )
+                var isAuthenticated by remember { mutableStateOf(false) }
+                var showPinDialog by remember { mutableStateOf(false) }
+                var isPinLoaded by remember { mutableStateOf(false) }
+                var pinError by remember { mutableStateOf("") }
+                val pin by settingsViewModel.pin.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    // Wait a moment for DataStore to load
+                    kotlinx.coroutines.delay(100)
+                    isPinLoaded = true
+                }
+
+                LaunchedEffect(isPinLoaded, pin) {
+                    if (isPinLoaded && pin == null) {
+                        // No PIN is set, allow access
+                        isAuthenticated = true
+                    } else if (isPinLoaded && pin != null) {
+                        // PIN is set, show dialog
+                        showPinDialog = true
+                    }
+                }
+
+                if (isAuthenticated) {
+                    AppNavigation(
+                        posViewModel = posViewModel,
+                        inventoryViewModel = inventoryViewModel,
+                        historyViewModel = historyViewModel,
+                        reportsViewModel = reportsViewModel,
+                        settingsViewModel = settingsViewModel,
+                        currency = currency,
+                        productRepo = productRepo
+                    )
+                }
+
+                if (showPinDialog && pin != null) {
+                    PinDialog(
+                        onDismiss = {
+                            finish()
+                        },
+                        onPinConfirm = { enteredPin ->
+                            if (settingsViewModel.validatePin(enteredPin)) {
+                                isAuthenticated = true
+                                showPinDialog = false
+                                pinError = ""
+                            } else {
+                                pinError = "Incorrect PIN"
+                            }
+                        },
+                        title = "Enter PIN to Access POS",
+                        errorMessage = pinError
+                    )
+                }
             }
         }
     }

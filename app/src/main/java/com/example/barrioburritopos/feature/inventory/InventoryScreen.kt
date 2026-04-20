@@ -43,7 +43,7 @@ fun InventoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Inventory", fontWeight = FontWeight.Bold) },
+                title = { Text("Inventory", fontWeight = FontWeight.Bold, color = Color.Black) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor),
                 actions = {
                     FloatingActionButton(

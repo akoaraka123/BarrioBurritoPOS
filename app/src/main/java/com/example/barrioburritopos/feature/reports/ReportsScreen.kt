@@ -41,7 +41,7 @@ fun ReportsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Daily Sales Report", fontWeight = FontWeight.Bold) },
+                title = { Text("Daily Sales Report", fontWeight = FontWeight.Bold, color = Color.Black) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor)
             )
         }
@@ -181,8 +181,8 @@ fun DailyReportCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(seller.productName, style = MaterialTheme.typography.bodySmall)
-                        Text("${seller.totalQty} sold", color = accentRed, style = MaterialTheme.typography.bodySmall)
+                        Text(seller.productName, style = MaterialTheme.typography.bodySmall, color = Color.Red)
+                        Text("${seller.totalQty} sold", color = Color.Red, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

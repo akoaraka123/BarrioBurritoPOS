@@ -62,6 +62,7 @@ fun PosScreen(
     onCheckout: () -> Unit,
     onResetCheckout: () -> Unit
 ) {
+    var swapLayout by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -79,7 +80,7 @@ fun PosScreen(
                                 .width(40.dp)
                                 .padding(end = 8.dp)
                         )
-                        Text("Barrio Burrito POS", fontWeight = FontWeight.Bold)
+                        Text("Barrio Burrito POS", fontWeight = FontWeight.Bold, color = Color.Black)
                     }
                 },
                 actions = {
@@ -88,6 +89,13 @@ fun PosScreen(
                             imageVector = if (showNavBar) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                             contentDescription = if (showNavBar) "Hide navigation bar" else "Show navigation bar",
                             tint = accentRed
+                        )
+                    }
+                    IconButton(onClick = { swapLayout = !swapLayout }) {
+                        Icon(
+                            imageVector = Icons.Default.ShoppingCart,
+                            contentDescription = if (swapLayout) "Reset layout" else "Swap layout",
+                            tint = if (swapLayout) accentRed else Color.Gray
                         )
                     }
                 },
@@ -105,35 +113,65 @@ fun PosScreen(
                 .padding(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Left: Menu
-            MenuPanel(
-                products = products,
-                searchQuery = searchQuery,
-                onSearchQueryChange = onSearchQueryChange,
-                onAddToCart = onAddToCart,
-                modifier = Modifier.weight(1.5f)
-            )
+            if (swapLayout) {
+                // Swapped: Left: Order/Cart, Right: Menu
+                OrderPanel(
+                    cart = cart,
+                    total = total,
+                    paymentMethod = paymentMethod,
+                    cashReceived = cashReceived,
+                    change = change,
+                    isCheckoutAllowed = isCheckoutAllowed,
+                    checkoutStatus = checkoutStatus,
+                    currency = currency,
+                    onIncreaseQty = onIncreaseQty,
+                    onDecreaseQty = onDecreaseQty,
+                    onRemove = onRemoveFromCart,
+                    onClear = onClearCart,
+                    onPaymentMethodChange = onPaymentMethodChange,
+                    onCashChange = onCashChange,
+                    onCheckout = onCheckout,
+                    onResetCheckout = onResetCheckout,
+                    modifier = Modifier.weight(1.2f)
+                )
 
-            // Right: Order/Cart
-            OrderPanel(
-                cart = cart,
-                total = total,
-                paymentMethod = paymentMethod,
-                cashReceived = cashReceived,
-                change = change,
-                isCheckoutAllowed = isCheckoutAllowed,
-                checkoutStatus = checkoutStatus,
-                currency = currency,
-                onIncreaseQty = onIncreaseQty,
-                onDecreaseQty = onDecreaseQty,
-                onRemove = onRemoveFromCart,
-                onClear = onClearCart,
-                onPaymentMethodChange = onPaymentMethodChange,
-                onCashChange = onCashChange,
-                onCheckout = onCheckout,
-                onResetCheckout = onResetCheckout,
-                modifier = Modifier.weight(1.2f)
-            )
+                MenuPanel(
+                    products = products,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = onSearchQueryChange,
+                    onAddToCart = onAddToCart,
+                    modifier = Modifier.weight(1.5f)
+                )
+            } else {
+                // Default: Left: Menu, Right: Order/Cart
+                MenuPanel(
+                    products = products,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = onSearchQueryChange,
+                    onAddToCart = onAddToCart,
+                    modifier = Modifier.weight(1.5f)
+                )
+
+                OrderPanel(
+                    cart = cart,
+                    total = total,
+                    paymentMethod = paymentMethod,
+                    cashReceived = cashReceived,
+                    change = change,
+                    isCheckoutAllowed = isCheckoutAllowed,
+                    checkoutStatus = checkoutStatus,
+                    currency = currency,
+                    onIncreaseQty = onIncreaseQty,
+                    onDecreaseQty = onDecreaseQty,
+                    onRemove = onRemoveFromCart,
+                    onClear = onClearCart,
+                    onPaymentMethodChange = onPaymentMethodChange,
+                    onCashChange = onCashChange,
+                    onCheckout = onCheckout,
+                    onResetCheckout = onResetCheckout,
+                    modifier = Modifier.weight(1.2f)
+                )
+            }
         }
     }
 }
@@ -318,7 +356,7 @@ fun OrderPanel(
             ) {
                 Text("Total:", fontWeight = FontWeight.Bold, color = darkText)
                 Text(
-                    "$currency${"%.2f".format(total)}",
+                    "$currency${String.format("%,.2f", total)}",
                     fontWeight = FontWeight.Bold,
                     color = accentRed,
                     style = MaterialTheme.typography.titleLarge
@@ -363,13 +401,17 @@ fun OrderPanel(
 
                 OutlinedTextField(
                     value = cashReceived,
-                    onValueChange = onCashChange,
-                    label = { Text("Amount Received") },
-                    prefix = { Text(currency) },
+                    onValueChange = { if (it.length <= 5) onCashChange(it) },
+                    label = { Text("Amount Received", color = Color.Black) },
+                    prefix = { Text(currency, color = Color.Black) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    isError = showInsufficient
+                    isError = showInsufficient,
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = accentRed,
+                        unfocusedTextColor = accentRed
+                    )
                 )
 
                 if (showInsufficient) {
@@ -396,7 +438,7 @@ fun OrderPanel(
             ) {
                 Text("Change:", fontWeight = FontWeight.Bold, color = darkText)
                 Text(
-                    "$currency${"%.2f".format(change)}",
+                    "$currency${String.format("%,.2f", change)}",
                     fontWeight = FontWeight.Bold,
                     color = if (change > 0) Color(0xFF2E7D32) else Color.Gray,
                     style = MaterialTheme.typography.titleMedium
@@ -484,7 +526,7 @@ fun CartItemRow(
                     color = darkText
                 )
                 Text(
-                    text = "$currency${"%.2f".format(item.subtotal)}",
+                    text = "$currency${String.format("%,.2f", item.subtotal)}",
                     color = accentRed,
                     style = MaterialTheme.typography.bodySmall
                 )
