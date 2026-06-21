@@ -14,15 +14,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -57,7 +59,7 @@ val screens = listOf(
     Screen.Settings
 )
 
-val navBarColor = Color(0xFFFFF8F0)
+val navBarColor = Color(0xFFE8E8E8)
 val navSelectedColor = Color(0xFFC94F2D)
 val navUnselectedColor = Color(0xFF888888)
 val navTextColorBlock = Color(0xFFFFE8CC)
@@ -83,7 +85,14 @@ fun AppNavigation(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showNavBar) {
+                val configuration = LocalConfiguration.current
+                val isTabletOrLandscape = configuration.screenWidthDp > 600 || configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                
+                val navBarHeight = if (isTabletOrLandscape) 64.dp else 80.dp
+                val labelStyle = if (isTabletOrLandscape) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium
+                
                 NavigationBar(
+                    modifier = Modifier.height(navBarHeight),
                     containerColor = navBarColor,
                     tonalElevation = 0.dp
                 ) {
@@ -92,10 +101,16 @@ fun AppNavigation(
 
                     screens.forEach { screen ->
                         NavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = screen.title) },
+                            icon = { 
+                                Icon(
+                                    screen.icon, 
+                                    contentDescription = screen.title
+                                )
+                            },
                             label = { 
                                 Text(
                                     screen.title,
+                                    style = labelStyle,
                                     modifier = Modifier.background(navTextColorBlock, shape = RoundedCornerShape(4.dp)).padding(4.dp, 2.dp)
                                 )
                             },
@@ -302,6 +317,3 @@ fun AppNavigation(
         }
     }
 }
-
-@Composable
-private fun <T> StateFlow<T>.collectAsStateWithLifecycle() = collectAsState()

@@ -210,7 +210,7 @@ fun CustomizeScreen(
                         options = riceOptions,
                         selectedNames = wizardState.rice?.let { setOf(it) } ?: emptySet(),
                         singleSelect = true,
-                        onSelect = viewModel::updateRice,
+                        onSelect = viewModel::toggleRice,
                         onToggle = {},
                         step = 0
                     )
@@ -218,7 +218,7 @@ fun CustomizeScreen(
                         options = mainOptions,
                         selectedNames = wizardState.main?.let { setOf(it) } ?: emptySet(),
                         singleSelect = true,
-                        onSelect = viewModel::updateMain,
+                        onSelect = viewModel::toggleMain,
                         onToggle = {},
                         step = 1
                     )
@@ -237,7 +237,7 @@ fun CustomizeScreen(
                         options = toppingOptions,
                         selectedNames = wizardState.topping?.let { setOf(it) } ?: emptySet(),
                         singleSelect = true,
-                        onSelect = viewModel::updateTopping,
+                        onSelect = viewModel::toggleTopping,
                         onToggle = {},
                         step = 3
                     )
@@ -245,7 +245,7 @@ fun CustomizeScreen(
                         options = sauceOptions,
                         selectedNames = wizardState.sauce?.let { setOf(it) } ?: emptySet(),
                         singleSelect = true,
-                        onSelect = viewModel::updateSauce,
+                        onSelect = viewModel::toggleSauce,
                         onToggle = {},
                         step = 4
                     )
@@ -778,7 +778,7 @@ private fun ReviewRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, color = Color.Gray)
+        Text(text = label, color = Color(0xFF666666))
         Text(
             text = value,
             color = darkText,

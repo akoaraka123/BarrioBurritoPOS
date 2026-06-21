@@ -644,10 +644,16 @@ fun CustomizeDialog(
 ) {
     var editingOption by remember { mutableStateOf<Pair<String, String>?>(null) } // (stepName, optionName)
     
-    Dialog(onDismissRequest = onDismiss) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismiss)
+    ) {
         Surface(
             modifier = Modifier
                 .fillMaxSize()
+                .clickable(onClick = { })
                 .background(Color.White),
             color = Color.White
         ) {

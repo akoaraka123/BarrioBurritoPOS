@@ -77,12 +77,24 @@ class CustomizeViewModel(
         else -> MutableStateFlow(emptyList())
     }
 
-    fun updateRice(value: String) {
-        _wizardState.update { it.copy(rice = value) }
+    fun toggleRice(value: String) {
+        _wizardState.update { state ->
+            if (state.rice == value) {
+                state.copy(rice = null)
+            } else {
+                state.copy(rice = value)
+            }
+        }
     }
 
-    fun updateMain(value: String) {
-        _wizardState.update { it.copy(main = value) }
+    fun toggleMain(value: String) {
+        _wizardState.update { state ->
+            if (state.main == value) {
+                state.copy(main = null)
+            } else {
+                state.copy(main = value)
+            }
+        }
     }
 
     fun toggleBase(value: String) {
@@ -103,12 +115,24 @@ class CustomizeViewModel(
         }
     }
 
-    fun updateTopping(value: String) {
-        _wizardState.update { it.copy(topping = value) }
+    fun toggleTopping(value: String) {
+        _wizardState.update { state ->
+            if (state.topping == value) {
+                state.copy(topping = null)
+            } else {
+                state.copy(topping = value)
+            }
+        }
     }
 
-    fun updateSauce(value: String) {
-        _wizardState.update { it.copy(sauce = value) }
+    fun toggleSauce(value: String) {
+        _wizardState.update { state ->
+            if (state.sauce == value) {
+                state.copy(sauce = null)
+            } else {
+                state.copy(sauce = value)
+            }
+        }
     }
 
     fun toggleAddOn(value: String) {

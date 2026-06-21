@@ -2,7 +2,9 @@ package com.example.barrioburritopos.feature.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -45,7 +47,8 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .background(backgroundColor)
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Business settings
@@ -66,14 +69,16 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = businessName,
                         onValueChange = onBusinessNameChange,
-                        label = { Text("Business Name") },
+                        label = { Text("Business Name", color = darkText) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
                             focusedTextColor = darkText,
-                            unfocusedTextColor = darkText
+                            unfocusedTextColor = darkText,
+                            focusedLabelColor = darkText,
+                            unfocusedLabelColor = Color(0xFF666666)
                         )
                     )
 
@@ -82,14 +87,16 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = currency,
                         onValueChange = onCurrencyChange,
-                        label = { Text("Currency Symbol") },
+                        label = { Text("Currency Symbol", color = darkText) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
                             focusedTextColor = darkText,
-                            unfocusedTextColor = darkText
+                            unfocusedTextColor = darkText,
+                            focusedLabelColor = darkText,
+                            unfocusedLabelColor = Color(0xFF666666)
                         )
                     )
                 }

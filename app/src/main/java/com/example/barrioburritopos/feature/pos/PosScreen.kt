@@ -300,7 +300,7 @@ fun OrderPanel(
     Card(
         modifier = modifier.fillMaxHeight(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = orderPanelColor),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column(
@@ -314,164 +314,178 @@ fun OrderPanel(
                 fontWeight = FontWeight.Bold,
                 color = darkText
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // Cart items
-            if (cart.isEmpty()) {
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No items added yet",
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    cart.forEach { item ->
-                        CartItemRow(
-                            item = item,
-                            currency = currency,
-                            onIncrease = { onIncreaseQty(item.lineId) },
-                            onDecrease = { onDecreaseQty(item.lineId) },
-                            onRemove = { onRemove(item.lineId) },
-                            onClick = { selectedItem = item }
+            // Top section: Scrollable items list
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (cart.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No items added yet",
+                            color = Color.Gray,
+                            style = MaterialTheme.typography.bodyMedium
                         )
+                    }
+                } else {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        cart.forEach { item ->
+                            CartItemRow(
+                                item = item,
+                                currency = currency,
+                                onIncrease = { onIncreaseQty(item.lineId) },
+                                onDecrease = { onDecreaseQty(item.lineId) },
+                                onRemove = { onRemove(item.lineId) },
+                                onClick = { selectedItem = item }
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(12.dp))
-
-            // Total
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Total:", fontWeight = FontWeight.Bold, color = darkText)
-                Text(
-                    "$currency${String.format("%,.2f", total)}",
-                    fontWeight = FontWeight.Bold,
-                    color = accentRed,
-                    style = MaterialTheme.typography.titleLarge
-                )
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            // Payment method selector
-            Text(
-                text = "Payment Method",
-                fontWeight = FontWeight.Bold,
-                color = darkText
-            )
-            Spacer(Modifier.height(6.dp))
-
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                SegmentedButton(
-                    selected = paymentMethod == PaymentMethod.CASH,
-                    onClick = { onPaymentMethodChange(PaymentMethod.CASH) },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Text("Cash", style = MaterialTheme.typography.bodyMedium)
-                }
-                SegmentedButton(
-                    selected = paymentMethod == PaymentMethod.GCASH,
-                    onClick = { onPaymentMethodChange(PaymentMethod.GCASH) },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Text("GCash", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-
             Spacer(Modifier.height(8.dp))
 
-            // Amount received (Cash only)
-            if (paymentMethod == PaymentMethod.CASH) {
-                val received = cashReceived.toDoubleOrNull()
-                val showInsufficient = cart.isNotEmpty() && (received == null || received < total)
-
-                OutlinedTextField(
-                    value = cashReceived,
-                    onValueChange = { if (it.length <= 5) onCashChange(it) },
-                    label = { Text("Amount Received", color = Color.Black) },
-                    prefix = { Text(currency, color = Color.Black) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            // Bottom section: Fixed summary/actions
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Total
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    isError = showInsufficient,
-                    colors = TextFieldDefaults.colors(
-                        focusedTextColor = accentRed,
-                        unfocusedTextColor = accentRed
-                    )
-                )
-
-                if (showInsufficient) {
-                    Spacer(Modifier.height(4.dp))
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Total:", fontWeight = FontWeight.Bold, color = darkText)
                     Text(
-                        text = "Insufficient payment",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
+                        "$currency${String.format("%,.2f", total)}",
+                        fontWeight = FontWeight.Bold,
+                        color = accentRed,
+                        style = MaterialTheme.typography.titleLarge
                     )
                 }
-            } else {
-                Text(
-                    text = "Cashless payment - no change needed",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
 
-            // Change
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Change:", fontWeight = FontWeight.Bold, color = darkText)
+                // Payment method selector
                 Text(
-                    "$currency${String.format("%,.2f", change)}",
+                    text = "Payment Method",
                     fontWeight = FontWeight.Bold,
-                    color = if (change > 0) Color(0xFF2E7D32) else Color.Gray,
-                    style = MaterialTheme.typography.titleMedium
+                    color = darkText
                 )
-            }
 
-            Spacer(Modifier.height(12.dp))
-
-            // Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = onClear,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Clear")
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = paymentMethod == PaymentMethod.CASH,
+                        onClick = { onPaymentMethodChange(PaymentMethod.CASH) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text("Cash", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    SegmentedButton(
+                        selected = paymentMethod == PaymentMethod.GCASH,
+                        onClick = { onPaymentMethodChange(PaymentMethod.GCASH) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text("GCash", style = MaterialTheme.typography.bodyMedium)
+                    }
                 }
-                Button(
-                    onClick = onCheckout,
-                    modifier = Modifier.weight(1f),
-                    enabled = isCheckoutAllowed,
-                    colors = ButtonDefaults.buttonColors(containerColor = accentYellow),
-                    shape = RoundedCornerShape(12.dp)
+
+                // Amount received (Cash only)
+                if (paymentMethod == PaymentMethod.CASH) {
+                    val received = cashReceived.toDoubleOrNull()
+                    val showInsufficient = cart.isNotEmpty() && (received == null || received < total)
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        OutlinedTextField(
+                            value = cashReceived,
+                            onValueChange = { if (it.length <= 5) onCashChange(it) },
+                            label = { Text("Amount Received", color = Color.Black) },
+                            prefix = { Text(currency, color = Color.Black) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            singleLine = true,
+                            isError = showInsufficient,
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = darkText,
+                                unfocusedTextColor = darkText,
+                                cursorColor = darkText,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedIndicatorColor = accentRed,
+                                unfocusedIndicatorColor = Color.Gray
+                            )
+                        )
+                    }
+
+                    if (showInsufficient) {
+                        Text(
+                            text = "Insufficient payment",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    // Change
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Change:", fontWeight = FontWeight.Bold, color = darkText)
+                        Text(
+                            "$currency${String.format("%,.2f", change)}",
+                            fontWeight = FontWeight.Bold,
+                            color = if (change > 0) Color(0xFF2E7D32) else Color.Gray,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                } else {
+                    Text(
+                        text = "Cashless payment - no change needed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+
+                // Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Checkout", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Button(
+                        onClick = onClear,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Clear")
+                    }
+                    Button(
+                        onClick = onCheckout,
+                        modifier = Modifier.weight(1f),
+                        enabled = isCheckoutAllowed,
+                        colors = ButtonDefaults.buttonColors(containerColor = accentYellow),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Checkout", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -541,7 +555,7 @@ fun OrderPanel(
                             }
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text = "Subtotal: $currency${String.format("%,.2f", item.subtotal)}",
                         fontWeight = FontWeight.Bold,
@@ -602,16 +616,17 @@ fun CartItemRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 IconButton(onClick = onDecrease) {
-                    Text("−", fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.titleLarge.fontSize)
+                    Text("−", fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.titleLarge.fontSize, color = darkText)
                 }
                 Text(
                     text = "${item.quantity}",
                     fontWeight = FontWeight.Bold,
+                    color = darkText,
                     modifier = Modifier.width(32.dp),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 IconButton(onClick = onIncrease) {
-                    Text("+", fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.titleLarge.fontSize)
+                    Text("+", fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.titleLarge.fontSize, color = darkText)
                 }
                 IconButton(onClick = onRemove) {
                     Text("×", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.titleLarge.fontSize)
