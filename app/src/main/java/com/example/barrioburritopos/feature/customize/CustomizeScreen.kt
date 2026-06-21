@@ -135,10 +135,9 @@ fun CustomizeScreen(
                 currency = currency,
                 onBack = { viewModel.goToPreviousStep() },
                 onAddToOrder = {
-                    if (onAddCustomBurrito(selection)) {
-                        viewModel.resetWizard()
-                        onAddedToOrder()
-                    }
+                    onAddCustomBurrito(selection)
+                    viewModel.resetWizard()
+                    onAddedToOrder()
                 }
             )
         } else {
@@ -703,6 +702,17 @@ private fun ReviewContent(
             ReviewCard(selection = selection, currency = currency)
         }
 
+        if (!selection.isComplete) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Please complete all required selections (Rice, Main, Base, Topping, Sauce)",
+                color = Color.Red,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+        }
+
         Spacer(Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -710,7 +720,9 @@ private fun ReviewContent(
         ) {
             OutlinedButton(
                 onClick = onBack,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Back")
@@ -718,8 +730,13 @@ private fun ReviewContent(
             Button(
                 onClick = onAddToOrder,
                 enabled = selection.isComplete,
-                modifier = Modifier.weight(1.5f),
-                colors = ButtonDefaults.buttonColors(containerColor = accentYellow),
+                modifier = Modifier
+                    .weight(1.5f)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (selection.isComplete) accentYellow else Color.Gray,
+                    disabledContainerColor = Color.Gray
+                ),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Add Custom Burrito to Order", color = Color.Black, fontWeight = FontWeight.Bold)

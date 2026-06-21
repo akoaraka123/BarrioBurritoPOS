@@ -76,7 +76,6 @@ class PosViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val isCheckoutAllowed: StateFlow<Boolean> = combine(cart, paymentMethod, total, cashReceived) { items, method, t, cash ->
-        if (items.isEmpty()) return@combine false
         when (method) {
             PaymentMethod.CASH -> {
                 val c = cash.toDoubleOrNull() ?: 0.0
@@ -113,11 +112,13 @@ class PosViewModel(
 
     fun addCustomBurritoToCart(selection: CustomBurritoSelection): Boolean {
         if (!selection.isComplete) return false
+        // Use any available product as a placeholder, or create a dummy product ID
         val burritoProduct = _products.value.find { it.name.equals("Burrito", ignoreCase = true) }
-            ?: return false
+            ?: _products.value.firstOrNull()
+        val productId = burritoProduct?.id ?: -1L
         val cartItem = CartItem(
             lineId = UUID.randomUUID().toString(),
-            productId = burritoProduct.id,
+            productId = productId,
             name = "Custom Burrito",
             price = selection.finalPrice,
             quantity = 1,
@@ -182,10 +183,6 @@ class PosViewModel(
     fun checkout() {
         viewModelScope.launch {
             val items = _cart.value
-            if (items.isEmpty()) {
-                _checkoutStatus.value = CheckoutStatus.Error("Cart is empty")
-                return@launch
-            }
 
             val totalAmount = items.sumOf { it.subtotal }
             val method = paymentMethod.value
@@ -205,8 +202,9 @@ class PosViewModel(
                 PaymentMethod.GCASH -> 0.0
             }
 
-            // Check stock availability
+            // Check stock availability (skip for custom burritos with -1L product ID)
             for (item in items) {
+                if (item.productId == -1L) continue // Skip stock check for custom burritos
                 val product = productRepo.getById(item.productId)
                 if (product == null || product.stockQuantity < item.quantity) {
                     _checkoutStatus.value = CheckoutStatus.Error("Insufficient stock for ${item.name}")
@@ -241,8 +239,9 @@ class PosViewModel(
                 // Save order and items
                 orderRepo.createOrder(order, orderItems)
 
-                // Decrease stock
+                // Decrease stock (skip for custom burritos with -1L product ID)
                 for (item in items) {
+                    if (item.productId == -1L) continue // Skip stock decrement for custom burritos
                     productRepo.decrementStock(item.productId, item.quantity)
                 }
 
