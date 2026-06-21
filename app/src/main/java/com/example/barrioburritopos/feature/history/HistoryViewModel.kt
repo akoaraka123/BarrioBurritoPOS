@@ -30,7 +30,10 @@ class HistoryViewModel(
 
     val filteredTransactions: StateFlow<List<Transaction>> = combine(_transactions, _searchQuery) { list, query ->
         if (query.isBlank()) list else list.filter {
-            it.items.any { item -> item.productName.contains(query, ignoreCase = true) }
+            it.items.any { item ->
+                item.productName.contains(query, ignoreCase = true) ||
+                    (item.itemDetails?.contains(query, ignoreCase = true) == true)
+            }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

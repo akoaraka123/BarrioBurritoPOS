@@ -147,6 +147,36 @@ fun SettingsScreen(
                         }
                     }
                 }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Developer Credit
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = cardColor),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "App Info",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = darkText
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = "Developed by: Marco A. Batiller",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = darkText
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Version: 2.0",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF666666)
+                        )
+                    }
+                }
             }
         }
     }

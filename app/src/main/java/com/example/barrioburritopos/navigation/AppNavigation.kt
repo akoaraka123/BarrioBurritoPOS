@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
@@ -15,6 +16,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -27,6 +29,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.barrioburritopos.data.local.entity.CustomizeStepType
+import com.example.barrioburritopos.feature.customize.CustomizeScreen
+import com.example.barrioburritopos.feature.customize.CustomizeViewModel
 import com.example.barrioburritopos.feature.history.HistoryScreen
 import com.example.barrioburritopos.feature.inventory.InventoryScreen
 import com.example.barrioburritopos.feature.pos.PosScreen
@@ -36,6 +41,7 @@ import com.example.barrioburritopos.feature.settings.SettingsScreen
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Pos : Screen("pos", "POS", Icons.Default.Home)
+    object Customize : Screen("customize", "Customize", Icons.Default.Edit)
     object History : Screen("history", "History", Icons.Default.Notifications)
     object Inventory : Screen("inventory", "Inventory", Icons.Default.List)
     object Reports : Screen("reports", "Reports", Icons.Default.Star)
@@ -44,6 +50,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 
 val screens = listOf(
     Screen.Pos,
+    Screen.Customize,
     Screen.History,
     Screen.Inventory,
     Screen.Reports,
@@ -59,6 +66,7 @@ val navTextColorBlock = Color(0xFFFFE8CC)
 @Composable
 fun AppNavigation(
     posViewModel: PosViewModel,
+    customizeViewModel: CustomizeViewModel,
     inventoryViewModel: com.example.barrioburritopos.feature.inventory.InventoryViewModel,
     historyViewModel: com.example.barrioburritopos.feature.history.HistoryViewModel,
     reportsViewModel: com.example.barrioburritopos.feature.reports.ReportsViewModel,
@@ -68,8 +76,11 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     var showNavBar by remember { mutableStateOf(true) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showNavBar) {
                 NavigationBar(
@@ -152,6 +163,39 @@ fun AppNavigation(
                     onResetCheckout = posViewModel::resetCheckoutStatus
                 )
             }
+            composable(Screen.Customize.route) {
+                CustomizeScreen(
+                    viewModel = customizeViewModel,
+                    currency = currency,
+                    onNavigateToPos = {
+                        navController.navigate(Screen.Pos.route) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onAddCustomBurrito = posViewModel::addCustomBurritoToCart,
+                    onAddedToOrder = {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Custom Burrito added to order.")
+                        }
+                        navController.navigate(Screen.Pos.route) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onShowMessage = { message ->
+                        scope.launch {
+                            snackbarHostState.showSnackbar(message)
+                        }
+                    }
+                )
+            }
             composable(Screen.History.route) {
                 val transactions by historyViewModel.filteredTransactions.collectAsStateWithLifecycle()
                 val searchQuery by historyViewModel.searchQuery.collectAsStateWithLifecycle()
@@ -170,16 +214,61 @@ fun AppNavigation(
             composable(Screen.Inventory.route) {
                 val products by inventoryViewModel.products.collectAsStateWithLifecycle()
                 val lowStock by inventoryViewModel.lowStockProducts.collectAsStateWithLifecycle()
+                val riceOptions by inventoryViewModel.riceOptions.collectAsStateWithLifecycle()
+                val mainOptions by inventoryViewModel.mainOptions.collectAsStateWithLifecycle()
+                val baseOptions by inventoryViewModel.baseOptions.collectAsStateWithLifecycle()
+                val toppingOptions by inventoryViewModel.toppingOptions.collectAsStateWithLifecycle()
+                val sauceOptions by inventoryViewModel.sauceOptions.collectAsStateWithLifecycle()
+                val addOnOptions by inventoryViewModel.addOnOptions.collectAsStateWithLifecycle()
 
                 InventoryScreen(
                     products = products,
                     lowStockProducts = lowStock,
+                    riceOptions = riceOptions,
+                    mainOptions = mainOptions,
+                    baseOptions = baseOptions,
+                    toppingOptions = toppingOptions,
+                    sauceOptions = sauceOptions,
+                    addOnOptions = addOnOptions,
                     currency = currency,
                     onAddProduct = inventoryViewModel::addProduct,
                     onToggleAvailability = inventoryViewModel::toggleAvailability,
                     onRestock = inventoryViewModel::restock,
                     onDelete = inventoryViewModel::deleteProduct,
-                    onUpdateProduct = inventoryViewModel::updateProduct
+                    onUpdateProduct = inventoryViewModel::updateProduct,
+                    onAddCustomizeOption = { stepName, optionName, price, imageUri ->
+                        val stepType = when (stepName) {
+                            "PICK YOUR RICE" -> CustomizeStepType.RICE
+                            "PICK YOUR MAIN" -> CustomizeStepType.MAIN
+                            "PICK YOUR BASE" -> CustomizeStepType.BASE
+                            "PICK YOUR TOPPING" -> CustomizeStepType.TOPPING
+                            "PICK YOUR SAUCE" -> CustomizeStepType.SAUCE
+                            "Add-ons" -> CustomizeStepType.ADDON
+                            else -> return@InventoryScreen
+                        }
+                        inventoryViewModel.addCustomizeOption(stepType, optionName, price, imageUri)
+                    },
+                    onUpdateCustomizeOption = { stepName, oldName, newName, price, imageUri ->
+                        val stepType = when (stepName) {
+                            "PICK YOUR RICE" -> CustomizeStepType.RICE
+                            "PICK YOUR MAIN" -> CustomizeStepType.MAIN
+                            "PICK YOUR BASE" -> CustomizeStepType.BASE
+                            "PICK YOUR TOPPING" -> CustomizeStepType.TOPPING
+                            "PICK YOUR SAUCE" -> CustomizeStepType.SAUCE
+                            "Add-ons" -> CustomizeStepType.ADDON
+                            else -> return@InventoryScreen
+                        }
+                        val option = when (stepType) {
+                            CustomizeStepType.RICE -> riceOptions
+                            CustomizeStepType.MAIN -> mainOptions
+                            CustomizeStepType.BASE -> baseOptions
+                            CustomizeStepType.TOPPING -> toppingOptions
+                            CustomizeStepType.SAUCE -> sauceOptions
+                            CustomizeStepType.ADDON -> addOnOptions
+                        }.find { it.name == oldName } ?: return@InventoryScreen
+                        inventoryViewModel.updateCustomizeOption(option.copy(name = newName, price = price, imageUri = imageUri))
+                    },
+                    onDeleteCustomizeOption = inventoryViewModel::deleteCustomizeOption
                 )
             }
             composable(Screen.Reports.route) {

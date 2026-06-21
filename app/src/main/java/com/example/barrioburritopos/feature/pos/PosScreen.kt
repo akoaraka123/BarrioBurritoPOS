@@ -2,6 +2,7 @@ package com.example.barrioburritopos.feature.pos
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -53,9 +54,9 @@ fun PosScreen(
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
     onAddToCart: (ProductEntity) -> Unit,
-    onIncreaseQty: (Long) -> Unit,
-    onDecreaseQty: (Long) -> Unit,
-    onRemoveFromCart: (Long) -> Unit,
+    onIncreaseQty: (String) -> Unit,
+    onDecreaseQty: (String) -> Unit,
+    onRemoveFromCart: (String) -> Unit,
     onClearCart: () -> Unit,
     onPaymentMethodChange: (PaymentMethod) -> Unit,
     onCashChange: (String) -> Unit,
@@ -284,9 +285,9 @@ fun OrderPanel(
     isCheckoutAllowed: Boolean,
     checkoutStatus: CheckoutStatus?,
     currency: String,
-    onIncreaseQty: (Long) -> Unit,
-    onDecreaseQty: (Long) -> Unit,
-    onRemove: (Long) -> Unit,
+    onIncreaseQty: (String) -> Unit,
+    onDecreaseQty: (String) -> Unit,
+    onRemove: (String) -> Unit,
     onClear: () -> Unit,
     onPaymentMethodChange: (PaymentMethod) -> Unit,
     onCashChange: (String) -> Unit,
@@ -294,6 +295,8 @@ fun OrderPanel(
     onResetCheckout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var selectedItem by remember { mutableStateOf<CartItem?>(null) }
+    
     Card(
         modifier = modifier.fillMaxHeight(),
         shape = RoundedCornerShape(20.dp),
@@ -337,9 +340,10 @@ fun OrderPanel(
                         CartItemRow(
                             item = item,
                             currency = currency,
-                            onIncrease = { onIncreaseQty(item.productId) },
-                            onDecrease = { onDecreaseQty(item.productId) },
-                            onRemove = { onRemove(item.productId) }
+                            onIncrease = { onIncreaseQty(item.lineId) },
+                            onDecrease = { onDecreaseQty(item.lineId) },
+                            onRemove = { onRemove(item.lineId) },
+                            onClick = { selectedItem = item }
                         )
                     }
                 }
@@ -497,6 +501,56 @@ fun OrderPanel(
         }
         null -> {}
     }
+
+    // Cart item details dialog
+    selectedItem?.let { item ->
+        AlertDialog(
+            onDismissRequest = { selectedItem = null },
+            confirmButton = {
+                TextButton(onClick = { selectedItem = null }) { Text("Close") }
+            },
+            title = {
+                Column {
+                    Text(item.name, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "$currency${String.format("%,.2f", item.price)} x ${item.quantity}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = accentRed
+                    )
+                }
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (item.details.isNullOrBlank()) {
+                        Text("No customizations", color = Color.Gray)
+                    } else {
+                        // Parse details and display them nicely
+                        val detailsLines = item.details.split(", ")
+                        detailsLines.forEach { detail ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8F0))
+                            ) {
+                                Text(
+                                    text = detail.trim(),
+                                    modifier = Modifier.padding(8.dp),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Subtotal: $currency${String.format("%,.2f", item.subtotal)}",
+                        fontWeight = FontWeight.Bold,
+                        color = darkText
+                    )
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -505,10 +559,13 @@ fun CartItemRow(
     currency: String,
     onIncrease: () -> Unit,
     onDecrease: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onClick: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
@@ -525,6 +582,14 @@ fun CartItemRow(
                     fontWeight = FontWeight.Bold,
                     color = darkText
                 )
+                if (!item.details.isNullOrBlank()) {
+                    Text(
+                        text = item.details,
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 3
+                    )
+                }
                 Text(
                     text = "$currency${String.format("%,.2f", item.subtotal)}",
                     color = accentRed,

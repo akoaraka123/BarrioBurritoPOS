@@ -89,12 +89,12 @@ fun HistoryScreen(
                         Text(
                             text = "No transactions yet",
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.Gray
+                            color = darkText
                         )
                         Text(
                             text = "Complete a checkout to see history here",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
+                            color = Color(0xFF666666)
                         )
                     }
                 }
@@ -165,7 +165,7 @@ fun TransactionCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = tx.dateTimeFormatted,
-                        color = Color.Gray,
+                        color = Color(0xFF666666),
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(Modifier.width(8.dp))
@@ -190,20 +190,30 @@ fun TransactionCard(
             Spacer(Modifier.height(8.dp))
 
             tx.items.forEach { item ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "${item.productName} × ${item.quantity}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = accentRed
-                    )
-                    Text(
-                        text = "$currency${"%.2f".format(item.subtotal)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = accentRed
-                    )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${item.productName} × ${item.quantity}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = accentRed
+                        )
+                        Text(
+                            text = "$currency${"%.2f".format(item.subtotal)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = accentRed
+                        )
+                    }
+                    if (!item.itemDetails.isNullOrBlank()) {
+                        Text(
+                            text = item.itemDetails,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF555555),
+                            modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 4.dp)
+                        )
+                    }
                 }
             }
 
@@ -218,12 +228,12 @@ fun TransactionCard(
                 Text(
                     text = "Payment: ${tx.paymentMethod}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = Color(0xFF666666)
                 )
                 Text(
                     text = "Received: $currency${"%.2f".format(tx.amountReceived ?: tx.totalAmount)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = Color(0xFF666666)
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -234,12 +244,12 @@ fun TransactionCard(
                 Text(
                     text = "Change",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = Color(0xFF666666)
                 )
                 Text(
                     text = "$currency${"%.2f".format(tx.changeAmount)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = Color(0xFF666666)
                 )
             }
 
@@ -254,7 +264,7 @@ fun TransactionCard(
                 Text(
                     text = "${tx.totalItems} items",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = Color(0xFF666666)
                 )
                 Text(
                     text = "Total: $currency${"%.2f".format(tx.totalAmount)}",
@@ -335,7 +345,7 @@ fun EditOrderDialog(
                                     Text(
                                         text = "Product",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray
+                                        color = Color(0xFF666666)
                                     )
                                     Box {
                                         OutlinedButton(
@@ -381,7 +391,7 @@ fun EditOrderDialog(
                                     Text(
                                         text = "Price: ₱${"%.2f".format(item.itemPrice)}",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray
+                                        color = Color(0xFF666666)
                                     )
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {

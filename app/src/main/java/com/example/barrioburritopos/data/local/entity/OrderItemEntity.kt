@@ -25,5 +25,6 @@ data class OrderItemEntity(
     val productName: String,
     val itemPrice: Double,
     val quantity: Int,
-    val subtotal: Double
+    val subtotal: Double,
+    val itemDetails: String? = null
 )

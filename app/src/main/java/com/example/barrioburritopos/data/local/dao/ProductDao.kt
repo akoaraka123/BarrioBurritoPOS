@@ -32,4 +32,7 @@ interface ProductDao {
 
     @Query("SELECT * FROM products WHERE stockQuantity <= :threshold AND isAvailable = 1")
     fun getLowStock(threshold: Int): Flow<List<ProductEntity>>
+
+    @Query("SELECT * FROM products WHERE category = :category ORDER BY name ASC")
+    fun getByCategory(category: String): Flow<List<ProductEntity>>
 }

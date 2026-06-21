@@ -9,10 +9,12 @@ import com.example.barrioburritopos.data.local.entity.ProductEntity
 import com.example.barrioburritopos.data.repository.OrderRepository
 import com.example.barrioburritopos.data.repository.ProductRepository
 import com.example.barrioburritopos.domain.model.CartItem
+import com.example.barrioburritopos.domain.model.CustomBurritoSelection
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.TimeZone
+import java.util.UUID
 
 enum class PaymentMethod {
     CASH,
@@ -98,19 +100,36 @@ class PosViewModel(
 
     fun addToCart(product: ProductEntity) {
         val current = _cart.value.toMutableList()
-        val existing = current.find { it.productId == product.id }
+        val lineId = "p_${product.id}"
+        val existing = current.find { it.lineId == lineId }
         if (existing != null) {
             val updated = existing.copy(quantity = existing.quantity + 1)
             current[current.indexOf(existing)] = updated
         } else {
-            current.add(CartItem(product.id, product.name, product.price, 1))
+            current.add(CartItem.fromProduct(product))
         }
         _cart.value = current
     }
 
-    fun increaseQuantity(productId: Long) {
+    fun addCustomBurritoToCart(selection: CustomBurritoSelection): Boolean {
+        if (!selection.isComplete) return false
+        val burritoProduct = _products.value.find { it.name.equals("Burrito", ignoreCase = true) }
+            ?: return false
+        val cartItem = CartItem(
+            lineId = UUID.randomUUID().toString(),
+            productId = burritoProduct.id,
+            name = "Custom Burrito",
+            price = selection.finalPrice,
+            quantity = 1,
+            details = selection.buildDetails()
+        )
+        _cart.value = _cart.value + cartItem
+        return true
+    }
+
+    fun increaseQuantity(lineId: String) {
         val current = _cart.value.toMutableList()
-        val index = current.indexOfFirst { it.productId == productId }
+        val index = current.indexOfFirst { it.lineId == lineId }
         if (index != -1) {
             val item = current[index]
             current[index] = item.copy(quantity = item.quantity + 1)
@@ -118,9 +137,9 @@ class PosViewModel(
         }
     }
 
-    fun decreaseQuantity(productId: Long) {
+    fun decreaseQuantity(lineId: String) {
         val current = _cart.value.toMutableList()
-        val index = current.indexOfFirst { it.productId == productId }
+        val index = current.indexOfFirst { it.lineId == lineId }
         if (index != -1) {
             val item = current[index]
             if (item.quantity > 1) {
@@ -132,8 +151,8 @@ class PosViewModel(
         }
     }
 
-    fun removeFromCart(productId: Long) {
-        _cart.value = _cart.value.filter { it.productId != productId }
+    fun removeFromCart(lineId: String) {
+        _cart.value = _cart.value.filter { it.lineId != lineId }
     }
 
     fun clearCart() {
@@ -208,12 +227,13 @@ class PosViewModel(
 
             val orderItems = items.map {
                 OrderItemEntity(
-                    orderId = 0, // will be set by DAO
+                    orderId = 0,
                     productId = it.productId,
                     productName = it.name,
                     itemPrice = it.price,
                     quantity = it.quantity,
-                    subtotal = it.subtotal
+                    subtotal = it.subtotal,
+                    itemDetails = it.details
                 )
             }
 

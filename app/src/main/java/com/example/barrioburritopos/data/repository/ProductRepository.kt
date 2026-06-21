@@ -13,4 +13,5 @@ class ProductRepository(private val productDao: ProductDao) {
     suspend fun delete(product: ProductEntity) = productDao.delete(product)
     suspend fun decrementStock(productId: Long, quantity: Int) = productDao.decrementStock(productId, quantity)
     fun getLowStock(threshold: Int): Flow<List<ProductEntity>> = productDao.getLowStock(threshold)
+    fun getByCategory(category: String): Flow<List<ProductEntity>> = productDao.getByCategory(category)
 }

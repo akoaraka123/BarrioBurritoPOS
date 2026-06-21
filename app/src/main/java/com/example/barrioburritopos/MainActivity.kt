@@ -10,8 +10,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.barrioburritopos.data.local.db.BarrioBurritoDatabase
+import com.example.barrioburritopos.data.repository.CustomizeOptionRepository
 import com.example.barrioburritopos.data.repository.OrderRepository
 import com.example.barrioburritopos.data.repository.ProductRepository
+import com.example.barrioburritopos.feature.customize.CustomizeViewModel
 import com.example.barrioburritopos.feature.history.HistoryViewModel
 import com.example.barrioburritopos.feature.inventory.InventoryViewModel
 import com.example.barrioburritopos.feature.pos.PosViewModel
@@ -28,12 +30,15 @@ class MainActivity : ComponentActivity() {
     private val database by lazy { BarrioBurritoDatabase.getDatabase(this) }
     private val productRepo by lazy { ProductRepository(database.productDao()) }
     private val orderRepo by lazy { OrderRepository(database.orderDao()) }
+    private val customizeOptionRepo by lazy {
+        CustomizeOptionRepository(database.customizeOptionDao(), applicationContext)
+    }
 
     private val posViewModel by viewModels<PosViewModel> {
         PosViewModel.factory(productRepo, orderRepo)
     }
     private val inventoryViewModel by viewModels<InventoryViewModel> {
-        InventoryViewModel.factory(productRepo)
+        InventoryViewModel.factory(productRepo, customizeOptionRepo)
     }
     private val historyViewModel by viewModels<HistoryViewModel> {
         HistoryViewModel.factory(orderRepo, productRepo)
@@ -43,6 +48,9 @@ class MainActivity : ComponentActivity() {
     }
     private val settingsViewModel by viewModels<SettingsViewModel> {
         SettingsViewModel.factory(this, orderRepo)
+    }
+    private val customizeViewModel by viewModels<CustomizeViewModel> {
+        CustomizeViewModel.factory(customizeOptionRepo)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,6 +94,7 @@ class MainActivity : ComponentActivity() {
                 if (isAuthenticated) {
                     AppNavigation(
                         posViewModel = posViewModel,
+                        customizeViewModel = customizeViewModel,
                         inventoryViewModel = inventoryViewModel,
                         historyViewModel = historyViewModel,
                         reportsViewModel = reportsViewModel,
