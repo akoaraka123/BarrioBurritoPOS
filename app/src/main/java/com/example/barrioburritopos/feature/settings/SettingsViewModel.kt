@@ -24,6 +24,7 @@ class SettingsViewModel(
     private val CURRENCY = stringPreferencesKey("currency")
     private val LOW_STOCK_THRESHOLD = intPreferencesKey("low_stock_threshold")
     private val PIN = stringPreferencesKey("pin")
+    private val CUSTOM_BURRITO_BASE_PRICE = doublePreferencesKey("custom_burrito_base_price")
 
     val businessName: StateFlow<String> = dataStore.data
         .map { it[BUSINESS_NAME] ?: "Barrio Burrito" }
@@ -40,6 +41,10 @@ class SettingsViewModel(
     val pin: StateFlow<String?> = dataStore.data
         .map { it[PIN] }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val customBurritoBasePrice: StateFlow<Double> = dataStore.data
+        .map { it[CUSTOM_BURRITO_BASE_PRICE] ?: 130.0 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 130.0)
 
     fun setBusinessName(name: String) {
         viewModelScope.launch {
@@ -73,6 +78,12 @@ class SettingsViewModel(
 
     fun validatePin(inputPin: String): Boolean {
         return pin.value == inputPin
+    }
+
+    fun setCustomBurritoBasePrice(price: Double) {
+        viewModelScope.launch {
+            dataStore.edit { it[CUSTOM_BURRITO_BASE_PRICE] = price }
+        }
     }
 
     suspend fun clearAllTransactions() {

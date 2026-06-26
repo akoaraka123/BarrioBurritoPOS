@@ -96,6 +96,10 @@ class ReportsViewModel(private val orderRepo: OrderRepository) : ViewModel() {
         }
     }
 
+    suspend fun getOrderItems(orderId: Long): List<com.example.barrioburritopos.data.local.entity.OrderItemEntity> {
+        return orderRepo.getItems(orderId)
+    }
+
     private fun getTodayRange(): Pair<Long, Long> {
         val cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Manila"))
         cal.set(Calendar.HOUR_OF_DAY, 0)

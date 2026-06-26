@@ -13,6 +13,7 @@ import com.example.barrioburritopos.data.local.db.BarrioBurritoDatabase
 import com.example.barrioburritopos.data.repository.CustomizeOptionRepository
 import com.example.barrioburritopos.data.repository.OrderRepository
 import com.example.barrioburritopos.data.repository.ProductRepository
+import com.example.barrioburritopos.domain.model.CustomBurritoPricing
 import com.example.barrioburritopos.feature.customize.CustomizeViewModel
 import com.example.barrioburritopos.feature.history.HistoryViewModel
 import com.example.barrioburritopos.feature.inventory.InventoryViewModel
@@ -63,6 +64,15 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 settingsViewModel.currency.collectLatest { curr ->
                     currency = curr
+                }
+            }
+        }
+
+        // Initialize custom burrito base price from settings
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                settingsViewModel.customBurritoBasePrice.collectLatest { price ->
+                    CustomBurritoPricing.BASE_PRICE = price
                 }
             }
         }

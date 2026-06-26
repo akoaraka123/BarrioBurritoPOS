@@ -1,5 +1,8 @@
 package com.example.barrioburritopos.feature.inventory
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.barrioburritopos.data.local.entity.CustomizeOptionEntity
 import com.example.barrioburritopos.data.local.entity.ProductEntity
 
@@ -50,6 +54,7 @@ fun InventoryScreen(
     sauceOptions: List<CustomizeOptionEntity> = emptyList(),
     addOnOptions: List<CustomizeOptionEntity> = emptyList(),
     currency: String = "₱",
+    customBurritoBasePrice: Double = 130.0,
     onAddProduct: (String, Double, Int, String?) -> Unit,
     onToggleAvailability: (ProductEntity) -> Unit,
     onRestock: (Long, Int) -> Unit,
@@ -57,7 +62,8 @@ fun InventoryScreen(
     onUpdateProduct: (ProductEntity) -> Unit = {},
     onAddCustomizeOption: (String, String, Double, String?) -> Unit = { _, _, _, _ -> },
     onUpdateCustomizeOption: (String, String, String, Double, String?) -> Unit = { _, _, _, _, _ -> },
-    onDeleteCustomizeOption: (String, String) -> Unit = { _, _ -> }
+    onDeleteCustomizeOption: (String, String) -> Unit = { _, _ -> },
+    onUpdateBasePrice: (Double) -> Unit = {}
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf<ProductEntity?>(null) }
@@ -172,10 +178,12 @@ fun InventoryScreen(
             sauceOptions = sauceOptions,
             addOnOptions = addOnOptions,
             currency = currency,
+            customBurritoBasePrice = customBurritoBasePrice,
             onDismiss = { showCustomizeDialog = false },
             onAddOption = onAddCustomizeOption,
             onUpdateOption = onUpdateCustomizeOption,
-            onDeleteOption = onDeleteCustomizeOption
+            onDeleteOption = onDeleteCustomizeOption,
+            onUpdateBasePrice = onUpdateBasePrice
         )
     }
 }
@@ -637,12 +645,15 @@ fun CustomizeDialog(
     sauceOptions: List<CustomizeOptionEntity>,
     addOnOptions: List<CustomizeOptionEntity>,
     currency: String,
+    customBurritoBasePrice: Double = 130.0,
     onDismiss: () -> Unit,
     onAddOption: (String, String, Double, String?) -> Unit = { _, _, _, _ -> },
     onUpdateOption: (String, String, String, Double, String?) -> Unit = { _, _, _, _, _ -> },
-    onDeleteOption: (String, String) -> Unit = { _, _ -> }
+    onDeleteOption: (String, String) -> Unit = { _, _ -> },
+    onUpdateBasePrice: (Double) -> Unit = {}
 ) {
     var editingOption by remember { mutableStateOf<Pair<String, String>?>(null) } // (stepName, optionName)
+    var showEditPriceDialog by remember { mutableStateOf(false) }
     
     Box(
         modifier = Modifier
@@ -683,33 +694,92 @@ fun CustomizeDialog(
                 }
                 
                 // Content
-                Column(
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(
-                        text = "Build Your Perfect Burrito",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = darkText,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "Manage customization options",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = accentRed,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
+                    item {
+                        Text(
+                            text = "Build Your Perfect Burrito",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = darkText,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Manage customization options",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = accentRed,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
 
-                    Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(16.dp))
 
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Custom Burrito Base Price Card (Left side, smaller)
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = accentYellow),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "Base Price",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = darkText
+                                    )
+                                    Text(
+                                        text = "$currency${"%.2f".format(customBurritoBasePrice)}",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = accentRed
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Button(
+                                        onClick = { showEditPriceDialog = true },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(containerColor = accentRed),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Edit", color = Color.White, fontSize = MaterialTheme.typography.bodySmall.fontSize)
+                                    }
+                                }
+                            }
+
+                            // Info card (Right side)
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = cardColor),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = "Customize Options",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = darkText
+                                    )
+                                    Text(
+                                        text = "Manage burrito customization steps",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
+                        }
+                    }
                     item {
                         // Step 1 - Rice
                         StepCard(
@@ -834,14 +904,26 @@ fun CustomizeDialog(
                     }
                 }
             }
+        }
 
         // Edit/Add Option Dialog
         editingOption?.let { (stepName, optionName) ->
             var editedName by remember { mutableStateOf(optionName) }
             var editedPrice by remember { mutableStateOf("0.0") }
             var selectedDrawable by remember { mutableStateOf<String?>(null) }
+            var selectedGalleryUri by remember { mutableStateOf<Uri?>(null) }
             val isAdding = optionName.isEmpty()
             val isAddOn = stepName == "Add-ons"
+            
+            // Gallery image picker
+            val galleryLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri: Uri? ->
+                if (uri != null) {
+                    selectedGalleryUri = uri
+                    selectedDrawable = null
+                }
+            }
             
             // Available drawable images
             val drawableImages = listOf(
@@ -867,10 +949,10 @@ fun CustomizeDialog(
                         editedPrice = option?.price?.toString() ?: "0.0"
                     }
                     // Extract drawable name from URI if it's a drawable resource
-                    selectedDrawable = option?.imageUri?.let { uri ->
-                        if (uri.startsWith("drawable://")) {
-                            uri.removePrefix("drawable://")
-                        } else null
+                    if (option?.imageUri?.startsWith("drawable://") == true) {
+                        selectedDrawable = option.imageUri.removePrefix("drawable://")
+                    } else if (option?.imageUri != null) {
+                        selectedGalleryUri = Uri.parse(option.imageUri)
                     }
                 }
             }
@@ -898,50 +980,22 @@ fun CustomizeDialog(
                             )
                         }
                         
-                        // Drawable image selector
+                        // Image selector
                         Text("Select Image:", style = MaterialTheme.typography.labelMedium)
                         var showImageDialog by remember { mutableStateOf(false) }
+                        
+                        // Display selected image info
+                        val imageDisplayText = when {
+                            selectedGalleryUri != null -> "Gallery image selected"
+                            selectedDrawable != null -> selectedDrawable
+                            else -> "No image selected"
+                        }
+                        
                         OutlinedButton(
                             onClick = { showImageDialog = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(selectedDrawable ?: "No image selected")
-                        }
-                        if (showImageDialog) {
-                            AlertDialog(
-                                onDismissRequest = { showImageDialog = false },
-                                title = { Text("Select Image") },
-                                text = {
-                                    LazyColumn(
-                                        modifier = Modifier.heightIn(max = 300.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        item {
-                                            Card(
-                                                modifier = Modifier.fillMaxWidth().clickable {
-                                                    selectedDrawable = null
-                                                    showImageDialog = false
-                                                }
-                                            ) {
-                                                Text("No image", modifier = Modifier.padding(12.dp))
-                                            }
-                                        }
-                                        items(drawableImages) { imageName ->
-                                            Card(
-                                                modifier = Modifier.fillMaxWidth().clickable {
-                                                    selectedDrawable = imageName
-                                                    showImageDialog = false
-                                                }
-                                            ) {
-                                                Text(imageName, modifier = Modifier.padding(12.dp))
-                                            }
-                                        }
-                                    }
-                                },
-                                confirmButton = {
-                                    TextButton(onClick = { showImageDialog = false }) { Text("Cancel") }
-                                }
-                            )
+                            Text(imageDisplayText ?: "No image selected")
                         }
                         
                         // Image preview
@@ -953,19 +1007,26 @@ fun CustomizeDialog(
                                 .background(Color(0xFFEFEFEF)),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (selectedDrawable != null) {
-                                val context = androidx.compose.ui.platform.LocalContext.current
+                            if (selectedGalleryUri != null) {
+                                AsyncImage(
+                                    model = selectedGalleryUri,
+                                    contentDescription = "Selected image",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else if (selectedDrawable != null) {
+                                val context = LocalContext.current
                                 val resourceId = context.resources.getIdentifier(
                                     selectedDrawable,
                                     "drawable",
                                     context.packageName
                                 )
                                 if (resourceId != 0) {
-                                    androidx.compose.foundation.Image(
-                                        painter = androidx.compose.ui.res.painterResource(id = resourceId),
-                                        contentDescription = "Preview",
+                                    Image(
+                                        painter = painterResource(id = resourceId),
+                                        contentDescription = "Selected image",
                                         modifier = Modifier.fillMaxSize(),
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                        contentScale = ContentScale.Crop
                                     )
                                 } else {
                                     Text("Image not found", color = Color.Red, style = MaterialTheme.typography.bodySmall)
@@ -974,6 +1035,65 @@ fun CustomizeDialog(
                                 Text("No image selected", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                             }
                         }
+                        
+                        if (showImageDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showImageDialog = false },
+                                title = { Text("Select Image") },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        // Gallery option
+                                        Button(
+                                            onClick = {
+                                                galleryLauncher.launch("image/*")
+                                                showImageDialog = false
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = ButtonDefaults.buttonColors(containerColor = accentRed)
+                                        ) {
+                                            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Pick from Gallery", color = Color.White)
+                                        }
+                                        
+                                        HorizontalDivider()
+                                        
+                                        Text("Or select from presets:", style = MaterialTheme.typography.labelSmall)
+                                        
+                                        LazyColumn(
+                                            modifier = Modifier.heightIn(max = 300.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            item {
+                                                Card(
+                                                    modifier = Modifier.fillMaxWidth().clickable {
+                                                        selectedDrawable = null
+                                                        selectedGalleryUri = null
+                                                        showImageDialog = false
+                                                    }
+                                                ) {
+                                                    Text("No image", modifier = Modifier.padding(12.dp))
+                                                }
+                                            }
+                                            items(drawableImages) { imageName ->
+                                                Card(
+                                                    modifier = Modifier.fillMaxWidth().clickable {
+                                                        selectedDrawable = imageName
+                                                        selectedGalleryUri = null
+                                                        showImageDialog = false
+                                                    }
+                                                ) {
+                                                    Text(imageName, modifier = Modifier.padding(12.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = { showImageDialog = false }) { Text("Cancel") }
+                                }
+                            )
+                        }
                     }
                 },
                 confirmButton = {
@@ -981,7 +1101,11 @@ fun CustomizeDialog(
                         onClick = {
                             if (editedName.isNotBlank()) {
                                 val price = if (isAddOn) editedPrice.toDoubleOrNull() ?: 0.0 else 0.0
-                                val imageUri = selectedDrawable?.let { "drawable://$it" }
+                                val imageUri = when {
+                                    selectedGalleryUri != null -> selectedGalleryUri.toString()
+                                    selectedDrawable != null -> "drawable://$selectedDrawable"
+                                    else -> null
+                                }
                                 if (isAdding) {
                                     onAddOption(stepName, editedName, price, imageUri)
                                 } else {
@@ -1000,7 +1124,51 @@ fun CustomizeDialog(
                 }
             )
         }
-            }
-        }
+    }
+
+    if (showEditPriceDialog) {
+        var newPrice by remember { mutableStateOf(customBurritoBasePrice.toString()) }
+        AlertDialog(
+            onDismissRequest = { showEditPriceDialog = false },
+            title = { Text("Edit Custom Burrito Base Price", color = Color.Black) },
+            text = {
+                Column {
+                    Text("Current base price: $currency${"%.2f".format(customBurritoBasePrice)}", color = Color.Black)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newPrice,
+                        onValueChange = { newPrice = it },
+                        label = { Text("New Base Price", color = Color.Black) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = Color.Black),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = accentRed,
+                            unfocusedBorderColor = Color.Gray,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val price = newPrice.toDoubleOrNull() ?: customBurritoBasePrice
+                        if (price > 0) {
+                            onUpdateBasePrice(price)
+                            showEditPriceDialog = false
+                        }
+                    },
+                    enabled = newPrice.toDoubleOrNull() ?: 0.0 > 0
+                ) {
+                    Text("Update")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditPriceDialog = false }) { Text("Cancel", color = Color.Black) }
+            },
+            containerColor = Color.White
+        )
     }
 }

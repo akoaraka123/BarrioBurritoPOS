@@ -4,7 +4,7 @@ import com.example.barrioburritopos.data.local.entity.CustomizeOptionEntity
 import com.example.barrioburritopos.data.local.entity.CustomizeStepType
 
 object CustomBurritoPricing {
-    const val BASE_PRICE = 130.0
+    var BASE_PRICE = 130.0
 }
 
 data class CustomBurritoSelection(
@@ -13,11 +13,13 @@ data class CustomBurritoSelection(
     val bases: Set<String> = emptySet(),
     val topping: String? = null,
     val sauce: String? = null,
-    val addOns: Set<String> = emptySet(),
+    val addOns: Map<String, Int> = emptyMap(),
     val addOnPrices: Map<String, Double> = emptyMap()
 ) {
     val addOnsTotal: Double
-        get() = addOns.sumOf { addOnPrices[it] ?: 0.0 }
+        get() = addOns.entries.sumOf { (name, count) ->
+            (addOnPrices[name] ?: 0.0) * count
+        }
 
     val finalPrice: Double
         get() = CustomBurritoPricing.BASE_PRICE + addOnsTotal
@@ -34,9 +36,14 @@ data class CustomBurritoSelection(
         topping?.let { parts.add("Topping: $it") }
         sauce?.let { parts.add("Sauce: $it") }
         if (addOns.isNotEmpty()) {
-            val addOnDetails = addOns.map { name ->
+            val addOnDetails = addOns.entries.map { (name, count) ->
                 val price = addOnPrices[name]
-                if (price != null && price > 0) "$name (₱${"%.0f".format(price)})" else name
+                val totalPrice = (price ?: 0.0) * count
+                if (totalPrice > 0) {
+                    if (count > 1) "$name x$count (₱${"%.0f".format(totalPrice)})" else "$name (₱${"%.0f".format(totalPrice)})"
+                } else {
+                    if (count > 1) "$name x$count" else name
+                }
             }
             parts.add("Add-ons: ${addOnDetails.joinToString(", ")}")
         }

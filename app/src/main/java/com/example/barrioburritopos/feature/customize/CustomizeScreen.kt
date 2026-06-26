@@ -64,13 +64,14 @@ private val STEP_CONFIGS = listOf(
     StepUiConfig("STEP 3", "PICK YOUR BASE", "Choose up to 5", "Select up to 5 fresh base ingredients."),
     StepUiConfig("STEP 4", "PICK YOUR TOPPING", "Choose 1", "Choose one topping to finish it off."),
     StepUiConfig("STEP 5", "PICK YOUR SAUCE", "Choose 1", "Select your sauce flavor."),
-    StepUiConfig("STEP 6", "ADD-ONS", "Optional extras", "Make your burrito even better with add-ons.")
+    StepUiConfig("STEP 6", "ADD-ONS", "Choose up to 5", "Make your burrito even better with add-ons.")
 )
 
 @Composable
 fun CustomizeScreen(
     viewModel: CustomizeViewModel,
     currency: String,
+    basePrice: Double,
     onNavigateToPos: () -> Unit,
     onAddCustomBurrito: (CustomBurritoSelection) -> Boolean,
     onAddedToOrder: () -> Unit,
@@ -86,6 +87,11 @@ fun CustomizeScreen(
     val addOnOptions by viewModel.addOnOptions.collectAsState()
 
     var showAddOptionDialog by remember { mutableStateOf(false) }
+
+    // Update base price when it changes
+    LaunchedEffect(basePrice) {
+        CustomBurritoPricing.BASE_PRICE = basePrice
+    }
 
     val selection = wizardState.toSelection(addOnPrices)
     val totalSteps = CustomizeStepType.entries.size
@@ -149,6 +155,38 @@ fun CustomizeScreen(
             }
 
             Spacer(Modifier.height(4.dp))
+
+            // Price display
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = accentYellow),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Total: ",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = darkText
+                        )
+                        Text(
+                            text = "$currency${"%.2f".format(selection.finalPrice)}",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = accentRed
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = "Build Your Perfect Burrito",
                 style = MaterialTheme.typography.headlineMedium,
@@ -200,6 +238,10 @@ fun CustomizeScreen(
                         Spacer(Modifier.height(8.dp))
                         SelectionCountBadge(count = wizardState.totalBaseCount, max = 5)
                     }
+                    if (wizardState.currentStep == 5) {
+                        Spacer(Modifier.height(8.dp))
+                        SelectionCountBadge(count = wizardState.totalAddOnCount, max = 5)
+                    }
                 }
 
                 Spacer(Modifier.height(8.dp))
@@ -248,11 +290,16 @@ fun CustomizeScreen(
                         onToggle = {},
                         step = 4
                     )
-                    5 -> AddOnsContent(
+                    5 -> OptionCardsRow(
                         options = addOnOptions,
-                        selected = wizardState.addOns,
-                        currency = currency,
-                        onToggle = viewModel::toggleAddOn
+                        selectedNames = wizardState.addOns.keys,
+                        selectedCounts = wizardState.addOns,
+                        singleSelect = false,
+                        maxSelection = 5,
+                        totalSelected = wizardState.totalAddOnCount,
+                        onSelect = {},
+                        onToggle = viewModel::toggleAddOn,
+                        step = 5
                     )
                 }
 
@@ -443,7 +490,8 @@ private fun OptionCardsRow(
                 onClick = {
                     if (singleSelect) onSelect(option.name)
                     else onToggle(option.name)
-                }
+                },
+                step = step
             )
         }
     }
@@ -455,15 +503,31 @@ private fun KioskOptionCard(
     selected: Boolean,
     count: Int = 0,
     enabled: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    step: Int = 0
 ) {
     val configuration = LocalConfiguration.current
     val isTabletOrLandscape = configuration.screenWidthDp > 600 || configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    
+    val isStep6 = step == 5 // Step 6 (Add-ons)
+
     // Controlled card dimensions to fit screen without scrolling
-    val cardWidth = if (isTabletOrLandscape) 260.dp else 180.dp
-    val cardHeight = if (isTabletOrLandscape) 200.dp else 180.dp
-    val imageHeight = if (isTabletOrLandscape) 130.dp else 110.dp
+    // Make Step 6 cards larger
+    val cardWidth = if (isStep6) {
+        if (isTabletOrLandscape) 320.dp else 220.dp
+    } else {
+        if (isTabletOrLandscape) 260.dp else 180.dp
+    }
+    val cardHeight = if (isStep6) {
+        if (isTabletOrLandscape) 240.dp else 220.dp
+    } else {
+        if (isTabletOrLandscape) 200.dp else 180.dp
+    }
+    val imageHeight = if (isStep6) {
+        if (isTabletOrLandscape) 160.dp else 140.dp
+    } else {
+        if (isTabletOrLandscape) 130.dp else 110.dp
+    }
+    val borderWidth = if (isStep6) 6.dp else (if (selected) 4.dp else 2.dp)
     
     Card(
         modifier = Modifier
@@ -474,7 +538,7 @@ private fun KioskOptionCard(
         colors = CardDefaults.cardColors(
             containerColor = if (selected) Color(0xFFFFF5EE) else Color(0xFFFAFAFA)
         ),
-        border = BorderStroke(if (selected) 4.dp else 2.dp, if (selected) accentRed else Color(0xFFE8E8E8)),
+        border = BorderStroke(borderWidth, if (selected) accentRed else Color(0xFFE8E8E8)),
         elevation = CardDefaults.cardElevation(defaultElevation = if (selected) 8.dp else 4.dp)
     ) {
         Box {
@@ -761,7 +825,7 @@ private fun ReviewCard(selection: CustomBurritoSelection, currency: String) {
             ReviewRow("Sauce", selection.sauce ?: "—")
             ReviewRow(
                 "Add-ons",
-                if (selection.addOns.isEmpty()) "None" else selection.addOns.joinToString(", ")
+                if (selection.addOns.isEmpty()) "None" else formatAddOnsWithCounts(selection.addOns, selection.addOnPrices)
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             ReviewRow("Base burrito", "$currency${"%.2f".format(CustomBurritoPricing.BASE_PRICE)}")
@@ -786,6 +850,19 @@ private fun formatBasesWithCounts(bases: Set<String>): String {
     val counts = bases.groupingBy { it }.eachCount()
     return counts.entries.joinToString(", ") { (name, count) ->
         if (count > 1) "$name x$count" else name
+    }
+}
+
+private fun formatAddOnsWithCounts(addOns: Map<String, Int>, addOnPrices: Map<String, Double>): String {
+    if (addOns.isEmpty()) return "None"
+    return addOns.entries.joinToString(", ") { (name, count) ->
+        val price = addOnPrices[name] ?: 0.0
+        val totalPrice = price * count
+        if (totalPrice > 0) {
+            if (count > 1) "$name x$count (₱${"%.0f".format(totalPrice)})" else "$name (₱${"%.0f".format(totalPrice)})"
+        } else {
+            if (count > 1) "$name x$count" else name
+        }
     }
 }
 

@@ -179,9 +179,11 @@ fun AppNavigation(
                 )
             }
             composable(Screen.Customize.route) {
+                val basePrice by settingsViewModel.customBurritoBasePrice.collectAsStateWithLifecycle()
                 CustomizeScreen(
                     viewModel = customizeViewModel,
                     currency = currency,
+                    basePrice = basePrice,
                     onNavigateToPos = {
                         navController.navigate(Screen.Pos.route) {
                             popUpTo(navController.graph.startDestinationId) {
@@ -235,6 +237,7 @@ fun AppNavigation(
                 val toppingOptions by inventoryViewModel.toppingOptions.collectAsStateWithLifecycle()
                 val sauceOptions by inventoryViewModel.sauceOptions.collectAsStateWithLifecycle()
                 val addOnOptions by inventoryViewModel.addOnOptions.collectAsStateWithLifecycle()
+                val customBurritoBasePrice by settingsViewModel.customBurritoBasePrice.collectAsStateWithLifecycle()
 
                 InventoryScreen(
                     products = products,
@@ -246,6 +249,7 @@ fun AppNavigation(
                     sauceOptions = sauceOptions,
                     addOnOptions = addOnOptions,
                     currency = currency,
+                    customBurritoBasePrice = customBurritoBasePrice,
                     onAddProduct = inventoryViewModel::addProduct,
                     onToggleAvailability = inventoryViewModel::toggleAvailability,
                     onRestock = inventoryViewModel::restock,
@@ -283,7 +287,8 @@ fun AppNavigation(
                         }.find { it.name == oldName } ?: return@InventoryScreen
                         inventoryViewModel.updateCustomizeOption(option.copy(name = newName, price = price, imageUri = imageUri))
                     },
-                    onDeleteCustomizeOption = inventoryViewModel::deleteCustomizeOption
+                    onDeleteCustomizeOption = inventoryViewModel::deleteCustomizeOption,
+                    onUpdateBasePrice = settingsViewModel::setCustomBurritoBasePrice
                 )
             }
             composable(Screen.Reports.route) {
@@ -296,6 +301,11 @@ fun AppNavigation(
                     currency = currency,
                     onViewTransactions = { dateMillis ->
                         reportsViewModel.loadTransactionsForDay(dateMillis)
+                    },
+                    onGetOrderItems = { orderId ->
+                        kotlinx.coroutines.runBlocking {
+                            reportsViewModel.getOrderItems(orderId)
+                        }
                     }
                 )
             }

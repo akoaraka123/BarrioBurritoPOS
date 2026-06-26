@@ -19,7 +19,7 @@ data class CustomizeWizardState(
     val bases: Map<String, Int> = emptyMap(),
     val topping: String? = null,
     val sauce: String? = null,
-    val addOns: Set<String> = emptySet()
+    val addOns: Map<String, Int> = emptyMap()
 ) {
     fun toSelection(addOnPrices: Map<String, Double>): CustomBurritoSelection = CustomBurritoSelection(
         rice = rice,
@@ -30,8 +30,9 @@ data class CustomizeWizardState(
         addOns = addOns,
         addOnPrices = addOnPrices
     )
-    
+
     val totalBaseCount: Int get() = bases.values.sum()
+    val totalAddOnCount: Int get() = addOns.values.sum()
 }
 
 class CustomizeViewModel(
@@ -137,7 +138,18 @@ class CustomizeViewModel(
 
     fun toggleAddOn(value: String) {
         _wizardState.update { state ->
-            val updated = if (state.addOns.contains(value)) state.addOns - value else state.addOns + value
+            val currentCount = state.addOns[value] ?: 0
+            val totalCount = state.totalAddOnCount
+
+            val updated = if (totalCount < 5) {
+                // Always increment count if under max (allows double, triple selection)
+                state.addOns + (value to (currentCount + 1))
+            } else if (currentCount > 0) {
+                // If at max, reset to unchecked (remove item completely)
+                state.addOns - value
+            } else {
+                state.addOns
+            }
             state.copy(addOns = updated)
         }
     }

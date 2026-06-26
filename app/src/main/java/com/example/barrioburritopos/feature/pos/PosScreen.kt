@@ -521,11 +521,11 @@ fun OrderPanel(
         AlertDialog(
             onDismissRequest = { selectedItem = null },
             confirmButton = {
-                TextButton(onClick = { selectedItem = null }) { Text("Close") }
+                TextButton(onClick = { selectedItem = null }) { Text("Close", color = Color.Black) }
             },
             title = {
                 Column {
-                    Text(item.name, fontWeight = FontWeight.Bold)
+                    Text(item.name, fontWeight = FontWeight.Bold, color = Color.Black)
                     Text(
                         text = "$currency${String.format("%,.2f", item.price)} x ${item.quantity}",
                         style = MaterialTheme.typography.bodyMedium,
@@ -538,7 +538,7 @@ fun OrderPanel(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (item.details.isNullOrBlank()) {
-                        Text("No customizations", color = Color.Gray)
+                        Text("No customizations", color = Color.Black)
                     } else {
                         // Parse details and display them nicely
                         val detailsLines = item.details.split(", ")
@@ -550,7 +550,8 @@ fun OrderPanel(
                                 Text(
                                     text = detail.trim(),
                                     modifier = Modifier.padding(8.dp),
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Black
                                 )
                             }
                         }
@@ -559,10 +560,11 @@ fun OrderPanel(
                     Text(
                         text = "Subtotal: $currency${String.format("%,.2f", item.subtotal)}",
                         fontWeight = FontWeight.Bold,
-                        color = darkText
+                        color = Color.Black
                     )
                 }
-            }
+            },
+            containerColor = Color.White
         )
     }
 }

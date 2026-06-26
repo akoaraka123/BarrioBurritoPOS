@@ -1,6 +1,7 @@
 package com.example.barrioburritopos.feature.reports
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barrioburritopos.data.local.entity.OrderEntity
+import com.example.barrioburritopos.data.local.entity.OrderItemEntity
 import com.example.barrioburritopos.domain.model.DailyReport
 import java.text.SimpleDateFormat
 import java.util.*
@@ -33,10 +35,12 @@ fun ReportsScreen(
     dailyReports: List<DailyReportWithDate>,
     selectedTransactions: List<OrderEntity>,
     currency: String = "₱",
-    onViewTransactions: (Long) -> Unit = {}
+    onViewTransactions: (Long) -> Unit = {},
+    onGetOrderItems: (Long) -> List<OrderItemEntity> = { emptyList() }
 ) {
     var showTransactionsDialog by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf("") }
+    var viewingOrderId by remember { mutableStateOf<Long?>(null) }
 
     Scaffold(
         topBar = {
@@ -85,8 +89,23 @@ fun ReportsScreen(
             date = selectedDate,
             transactions = selectedTransactions,
             currency = currency,
-            onDismiss = { showTransactionsDialog = false }
+            onDismiss = { showTransactionsDialog = false },
+            onViewOrder = { viewingOrderId = it },
+            onGetOrderItems = onGetOrderItems
         )
+    }
+
+    viewingOrderId?.let { orderId ->
+        val order = selectedTransactions.find { it.id == orderId }
+        order?.let {
+            val items = onGetOrderItems(orderId)
+            ReportOrderDetailsDialog(
+                order = order,
+                items = items,
+                currency = currency,
+                onDismiss = { viewingOrderId = null }
+            )
+        }
     }
 }
 
@@ -196,27 +215,30 @@ fun TransactionsDialog(
     date: String,
     transactions: List<OrderEntity>,
     currency: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onViewOrder: (Long) -> Unit = {},
+    onGetOrderItems: (Long) -> List<OrderItemEntity> = { emptyList() }
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Transactions - $date") },
+        title = { Text("Transactions - $date", color = Color.Black) },
         text = {
             if (transactions.isEmpty()) {
-                Text("No transactions")
+                Text("No transactions", color = Color.Black)
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(transactions) { order ->
-                        TransactionRow(order, currency)
+                        TransactionRow(order, currency, onViewOrder)
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text("Close", color = Color.Black)
             }
-        }
+        },
+        containerColor = Color.White
     )
 }
 
@@ -283,12 +305,14 @@ fun SummaryCard(
 }
 
 @Composable
-fun TransactionRow(order: OrderEntity, currency: String) {
-    val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(order.dateTime))
+fun TransactionRow(order: OrderEntity, currency: String, onViewOrder: (Long) -> Unit = {}) {
+    val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(order.dateTime))
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onViewOrder(order.id) },
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8F0)),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -302,7 +326,7 @@ fun TransactionRow(order: OrderEntity, currency: String) {
                 Text(
                     text = "Order #${order.id}",
                     fontWeight = FontWeight.Bold,
-                    color = darkText
+                    color = Color.Black
                 )
                 Text(
                     text = "$time • ${order.totalItems} items",
@@ -318,4 +342,123 @@ fun TransactionRow(order: OrderEntity, currency: String) {
             )
         }
     }
+}
+
+@Composable
+fun ReportOrderDetailsDialog(
+    order: OrderEntity,
+    items: List<OrderItemEntity>,
+    currency: String,
+    onDismiss: () -> Unit
+) {
+    val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(order.dateTime))
+    val date = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(order.dateTime))
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close", color = Color.Black) }
+        },
+        title = {
+            Column {
+                Text("Order #${order.id}", fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(
+                    text = "$date at $time",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF666666)
+                )
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Items
+                items.forEach { item ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8F0))
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "${item.productName} × ${item.quantity}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "$currency${"%.2f".format(item.subtotal)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = accentRed
+                                )
+                            }
+                            if (!item.itemDetails.isNullOrBlank()) {
+                                Text(
+                                    text = item.itemDetails,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF555555),
+                                    modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                // Payment details
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Payment Method:", color = Color.Black)
+                    Text(order.paymentMethod, color = Color.Black)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Amount Received:", color = Color.Black)
+                    Text("$currency${"%.2f".format(order.amountReceived ?: order.totalAmount)}", color = Color.Black)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Change:", color = Color.Black)
+                    Text("$currency${"%.2f".format(order.changeAmount)}", color = Color.Black)
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                // Total
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Total (${order.totalItems} items):",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "$currency${"%.2f".format(order.totalAmount)}",
+                        fontWeight = FontWeight.Bold,
+                        color = accentRed,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+            }
+        },
+        containerColor = Color.White
+    )
 }

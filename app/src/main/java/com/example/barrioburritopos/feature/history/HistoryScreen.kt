@@ -1,6 +1,7 @@
 package com.example.barrioburritopos.feature.history
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,6 +44,7 @@ fun HistoryScreen(
     var editingOrderId by remember { mutableStateOf<Long?>(null) }
     var editingItems by remember { mutableStateOf<List<OrderItemEntity>>(emptyList()) }
     var isLocked by remember { mutableStateOf(true) }
+    var viewingOrderId by remember { mutableStateOf<Long?>(null) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -107,6 +109,7 @@ fun HistoryScreen(
                             tx,
                             currency,
                             isLocked,
+                            onViewOrder = { viewingOrderId = tx.id },
                             onEditOrder = {
                                 editingOrderId = tx.id
                                 editingItems = tx.items
@@ -132,6 +135,17 @@ fun HistoryScreen(
             )
         }
     }
+
+    viewingOrderId?.let { orderId ->
+        val order = transactions.find { it.id == orderId }
+        order?.let {
+            OrderDetailsDialog(
+                transaction = order,
+                currency = currency,
+                onDismiss = { viewingOrderId = null }
+            )
+        }
+    }
 }
 
 @Composable
@@ -139,6 +153,7 @@ fun TransactionCard(
     tx: Transaction,
     currency: String,
     isLocked: Boolean,
+    onViewOrder: () -> Unit = {},
     onEditOrder: () -> Unit = {},
     onDeleteOrder: () -> Unit = {}
 ) {
@@ -160,7 +175,8 @@ fun TransactionCard(
                     text = "Order #${tx.id}",
                     fontWeight = FontWeight.Bold,
                     color = darkText,
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.clickable { onViewOrder() }
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -524,4 +540,119 @@ fun EditOrderDialog(
             }
         )
     }
+}
+
+@Composable
+fun OrderDetailsDialog(
+    transaction: Transaction,
+    currency: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close", color = Color.Black) }
+        },
+        title = {
+            Column {
+                Text("Order #${transaction.id}", fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(
+                    text = transaction.dateTimeFormatted,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF666666)
+                )
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Items
+                transaction.items.forEach { item ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8F0))
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "${item.productName} × ${item.quantity}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
+                                Text(
+                                    text = "$currency${"%.2f".format(item.subtotal)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = accentRed
+                                )
+                            }
+                            if (!item.itemDetails.isNullOrBlank()) {
+                                Text(
+                                    text = item.itemDetails,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF555555),
+                                    modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                // Payment details
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Payment Method:", color = Color.Black)
+                    Text(transaction.paymentMethod, color = Color.Black)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Amount Received:", color = Color.Black)
+                    Text("$currency${"%.2f".format(transaction.amountReceived ?: transaction.totalAmount)}", color = Color.Black)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Change:", color = Color.Black)
+                    Text("$currency${"%.2f".format(transaction.changeAmount)}", color = Color.Black)
+                }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(8.dp))
+
+                // Total
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Total (${transaction.totalItems} items):",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "$currency${"%.2f".format(transaction.totalAmount)}",
+                        fontWeight = FontWeight.Bold,
+                        color = accentRed,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+            }
+        },
+        containerColor = Color.White
+    )
 }

@@ -26,13 +26,13 @@ class PosViewModel(
     private val orderRepo: OrderRepository
 ) : ViewModel() {
 
-    private val _products = MutableStateFlow<List<ProductEntity>>(emptyList())
-    val products: StateFlow<List<ProductEntity>> = _products.asStateFlow()
+    val products: StateFlow<List<ProductEntity>> = productRepo.getAllAvailable()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val filteredProducts: StateFlow<List<ProductEntity>> = combine(_products, _searchQuery) { products, query ->
+    val filteredProducts: StateFlow<List<ProductEntity>> = combine(products, _searchQuery) { products, query ->
         if (query.isBlank()) {
             products
         } else {
@@ -86,15 +86,7 @@ class PosViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     init {
-        loadProducts()
-    }
-
-    private fun loadProducts() {
-        viewModelScope.launch {
-            productRepo.getAllAvailable().collect { list ->
-                _products.value = list
-            }
-        }
+        // Products are now loaded via StateFlow directly
     }
 
     fun addToCart(product: ProductEntity) {
@@ -113,12 +105,12 @@ class PosViewModel(
     fun addCustomBurritoToCart(selection: CustomBurritoSelection): Boolean {
         if (!selection.isComplete) return false
         // Use any available product as a placeholder, or create a dummy product ID
-        val burritoProduct = _products.value.find { it.name.equals("Burrito", ignoreCase = true) }
-            ?: _products.value.firstOrNull()
+        val burritoProduct = products.value.find { it.name.equals("Burrito", ignoreCase = true) }
+            ?: products.value.firstOrNull()
         val productId = burritoProduct?.id ?: -1L
         val cartItem = CartItem(
             lineId = UUID.randomUUID().toString(),
-            productId = productId,
+            productId =                     productId,
             name = "Custom Burrito",
             price = selection.finalPrice,
             quantity = 1,
