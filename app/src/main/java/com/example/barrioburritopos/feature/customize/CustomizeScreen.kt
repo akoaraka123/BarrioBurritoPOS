@@ -37,7 +37,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.barrioburritopos.data.local.entity.CustomizeOptionEntity
@@ -49,6 +48,7 @@ import com.example.barrioburritopos.feature.pos.accentYellow
 import com.example.barrioburritopos.feature.pos.backgroundColor
 import com.example.barrioburritopos.feature.pos.cardColor
 import com.example.barrioburritopos.feature.pos.darkText
+import com.example.barrioburritopos.ui.responsive.rememberResponsiveInfo
 import java.io.File
 
 private data class StepUiConfig(
@@ -96,6 +96,8 @@ fun CustomizeScreen(
     val selection = wizardState.toSelection(addOnPrices)
     val totalSteps = CustomizeStepType.entries.size
     val stepConfig = STEP_CONFIGS.getOrElse(wizardState.currentStep) { STEP_CONFIGS.first() }
+    val responsiveInfo = rememberResponsiveInfo()
+    val compact = responsiveInfo.isPhone
 
     LaunchedEffect(Unit) {
         viewModel.message.collect { onShowMessage(it) }
@@ -133,7 +135,10 @@ fun CustomizeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .padding(
+                horizontal = if (compact) 12.dp else 24.dp,
+                vertical = if (compact) 8.dp else 16.dp
+            )
     ) {
         if (wizardState.showReview) {
             ReviewContent(
@@ -189,7 +194,7 @@ fun CustomizeScreen(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Build Your Perfect Burrito",
-                style = MaterialTheme.typography.headlineMedium,
+                style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = darkText,
                 modifier = Modifier.fillMaxWidth(),
@@ -197,7 +202,7 @@ fun CustomizeScreen(
             )
             Text(
                 text = "You choose. We roll.",
-                style = MaterialTheme.typography.titleMedium,
+                style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
                 color = accentRed,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
@@ -221,7 +226,7 @@ fun CustomizeScreen(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = if (wizardState.currentStep == 5) "Want to add extras?" else stepConfig.title,
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = darkText
                     )
@@ -448,12 +453,11 @@ private fun OptionCardsRow(
     onToggle: (String) -> Unit,
     step: Int
 ) {
-    val configuration = LocalConfiguration.current
-    val isTabletOrLandscape = configuration.screenWidthDp > 600 || configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val responsiveInfo = rememberResponsiveInfo()
     
     // Determine columns based on step and screen size
     val columns = when {
-        isTabletOrLandscape -> when (step) {
+        responsiveInfo.isTablet -> when (step) {
             0 -> 2 // Step 1: 2 large cards
             1 -> 4 // Step 2: 4 large cards
             2 -> 5 // Step 3: 5 cards if fits
@@ -461,6 +465,15 @@ private fun OptionCardsRow(
             4 -> 5 // Step 5: 5 cards if fits
             else -> 3
         }
+        responsiveInfo.isLandscape -> when (step) {
+            0 -> 2
+            1 -> 3
+            2 -> 3
+            3 -> 3
+            4 -> 3
+            else -> 3
+        }
+        responsiveInfo.screenWidthDp < 360 -> 1
         else -> when (step) {
             0 -> 2 // Step 1: 2 cards
             1 -> 2 // Step 2: 2 cards on portrait
@@ -473,8 +486,8 @@ private fun OptionCardsRow(
     
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (responsiveInfo.isTablet) 16.dp else 8.dp),
+        verticalArrangement = Arrangement.spacedBy(if (responsiveInfo.isTablet) 16.dp else 8.dp),
         contentPadding = PaddingValues(4.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -506,35 +519,29 @@ private fun KioskOptionCard(
     onClick: () -> Unit,
     step: Int = 0
 ) {
-    val configuration = LocalConfiguration.current
-    val isTabletOrLandscape = configuration.screenWidthDp > 600 || configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val responsiveInfo = rememberResponsiveInfo()
     val isStep6 = step == 5 // Step 6 (Add-ons)
 
     // Controlled card dimensions to fit screen without scrolling
     // Make Step 6 cards larger
-    val cardWidth = if (isStep6) {
-        if (isTabletOrLandscape) 320.dp else 220.dp
-    } else {
-        if (isTabletOrLandscape) 260.dp else 180.dp
-    }
     val cardHeight = if (isStep6) {
-        if (isTabletOrLandscape) 240.dp else 220.dp
+        if (responsiveInfo.isTablet) 240.dp else 168.dp
     } else {
-        if (isTabletOrLandscape) 200.dp else 180.dp
+        if (responsiveInfo.isTablet) 200.dp else 152.dp
     }
     val imageHeight = if (isStep6) {
-        if (isTabletOrLandscape) 160.dp else 140.dp
+        if (responsiveInfo.isTablet) 160.dp else 96.dp
     } else {
-        if (isTabletOrLandscape) 130.dp else 110.dp
+        if (responsiveInfo.isTablet) 130.dp else 84.dp
     }
-    val borderWidth = if (isStep6) 6.dp else (if (selected) 4.dp else 2.dp)
+    val borderWidth = if (isStep6 && responsiveInfo.isTablet) 6.dp else (if (selected) 4.dp else 2.dp)
     
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(cardHeight)
             .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(if (responsiveInfo.isTablet) 20.dp else 14.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) Color(0xFFFFF5EE) else Color(0xFFFAFAFA)
         ),
@@ -545,7 +552,7 @@ private fun KioskOptionCard(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(12.dp),
+                    .padding(if (responsiveInfo.isTablet) 12.dp else 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 OptionImage(
@@ -553,12 +560,12 @@ private fun KioskOptionCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(imageHeight)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(if (responsiveInfo.isTablet) 16.dp else 10.dp))
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(if (responsiveInfo.isTablet) 8.dp else 6.dp))
                 Text(
                     text = option.name,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = if (responsiveInfo.isTablet) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = if (enabled) darkText else Color.Gray,
                     textAlign = TextAlign.Center,
@@ -573,9 +580,8 @@ private fun KioskOptionCard(
 
 @Composable
 private fun SelectionCheckmark(selected: Boolean, count: Int = 0, modifier: Modifier = Modifier) {
-    val configuration = LocalConfiguration.current
-    val isTabletOrLandscape = configuration.screenWidthDp > 600 || configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val checkmarkSize = if (isTabletOrLandscape) 40.dp else 32.dp
+    val responsiveInfo = rememberResponsiveInfo()
+    val checkmarkSize = if (responsiveInfo.isTablet) 40.dp else 30.dp
     
     if (selected) {
         Box(
@@ -591,15 +597,15 @@ private fun SelectionCheckmark(selected: Boolean, count: Int = 0, modifier: Modi
                     text = count.toString(),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    style = if (isTabletOrLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge
+                    style = if (responsiveInfo.isTablet) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium
                 )
             } else {
-                Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(if (isTabletOrLandscape) 24.dp else 20.dp))
+                Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(if (responsiveInfo.isTablet) 24.dp else 18.dp))
             }
         }
     } else {
         Surface(
-            modifier = modifier.padding(12.dp).size(checkmarkSize),
+            modifier = modifier.padding(if (responsiveInfo.isTablet) 12.dp else 8.dp).size(checkmarkSize),
             shape = CircleShape,
             color = Color.White,
             border = BorderStroke(2.dp, Color(0xFFCCCCCC))
@@ -671,11 +677,10 @@ private fun AddOnsContent(
     onToggle: (String) -> Unit
 ) {
     val total = selected.sumOf { name -> options.find { it.name == name }?.price ?: 0.0 }
-    val configuration = LocalConfiguration.current
-    val isTabletOrLandscape = configuration.screenWidthDp > 600 || configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val responsiveInfo = rememberResponsiveInfo()
     
     // Determine columns based on screen size
-    val columns = if (isTabletOrLandscape) 4 else 2
+    val columns = if (responsiveInfo.isTablet) 4 else if (responsiveInfo.screenWidthDp < 360) 1 else 2
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         LazyVerticalGrid(

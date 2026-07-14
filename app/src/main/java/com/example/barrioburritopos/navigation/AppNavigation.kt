@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -40,6 +39,7 @@ import com.example.barrioburritopos.feature.pos.PosScreen
 import com.example.barrioburritopos.feature.pos.PosViewModel
 import com.example.barrioburritopos.feature.reports.ReportsScreen
 import com.example.barrioburritopos.feature.settings.SettingsScreen
+import com.example.barrioburritopos.ui.responsive.rememberResponsiveInfo
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Pos : Screen("pos", "POS", Icons.Default.Home)
@@ -85,11 +85,9 @@ fun AppNavigation(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showNavBar) {
-                val configuration = LocalConfiguration.current
-                val isTabletOrLandscape = configuration.screenWidthDp > 600 || configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-                
-                val navBarHeight = if (isTabletOrLandscape) 64.dp else 80.dp
-                val labelStyle = if (isTabletOrLandscape) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium
+                val responsiveInfo = rememberResponsiveInfo()
+                val navBarHeight = if (responsiveInfo.isTablet) 64.dp else 60.dp
+                val labelStyle = MaterialTheme.typography.labelSmall
                 
                 NavigationBar(
                     modifier = Modifier.height(navBarHeight),
@@ -114,6 +112,7 @@ fun AppNavigation(
                                     modifier = Modifier.background(navTextColorBlock, shape = RoundedCornerShape(4.dp)).padding(4.dp, 2.dp)
                                 )
                             },
+                            alwaysShowLabel = responsiveInfo.isTablet,
                             selected = currentRoute == screen.route,
                             onClick = {
                                 navController.navigate(screen.route) {
@@ -152,6 +151,7 @@ fun AppNavigation(
                 val change by posViewModel.change.collectAsStateWithLifecycle()
                 val isCheckoutAllowed by posViewModel.isCheckoutAllowed.collectAsStateWithLifecycle()
                 val checkoutStatus by posViewModel.checkoutStatus.collectAsStateWithLifecycle()
+                val selectedPrinterAddress by settingsViewModel.selectedPrinterAddress.collectAsStateWithLifecycle()
 
                 PosScreen(
                     products = products,
@@ -163,6 +163,7 @@ fun AppNavigation(
                     isCheckoutAllowed = isCheckoutAllowed,
                     checkoutStatus = checkoutStatus,
                     currency = currency,
+                    selectedPrinterAddress = selectedPrinterAddress,
                     showNavBar = showNavBar,
                     onToggleNavBar = { showNavBar = !showNavBar },
                     searchQuery = searchQuery,
@@ -313,12 +314,17 @@ fun AppNavigation(
                 val businessName by settingsViewModel.businessName.collectAsStateWithLifecycle()
                 val currencySetting by settingsViewModel.currency.collectAsStateWithLifecycle()
                 val pin by settingsViewModel.pin.collectAsStateWithLifecycle()
+                val selectedPrinterName by settingsViewModel.selectedPrinterName.collectAsStateWithLifecycle()
+                val selectedPrinterAddress by settingsViewModel.selectedPrinterAddress.collectAsStateWithLifecycle()
 
                 SettingsScreen(
                     businessName = businessName,
                     currency = currencySetting,
+                    selectedPrinterName = selectedPrinterName,
+                    selectedPrinterAddress = selectedPrinterAddress,
                     onBusinessNameChange = settingsViewModel::setBusinessName,
                     onCurrencyChange = settingsViewModel::setCurrency,
+                    onSelectedPrinterChange = settingsViewModel::setSelectedPrinter,
                     hasPin = pin != null,
                     onSetPin = settingsViewModel::setPin,
                     onClearPin = settingsViewModel::clearPin

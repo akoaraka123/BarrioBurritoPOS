@@ -30,11 +30,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.barrioburritopos.data.local.entity.CustomizeOptionEntity
 import com.example.barrioburritopos.data.local.entity.ProductEntity
+import com.example.barrioburritopos.ui.responsive.rememberResponsiveInfo
 
 val backgroundColor = Color(0xFFFFF8F0)
 val cardColor = Color(0xFFFFE8CC)
@@ -68,6 +70,8 @@ fun InventoryScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf<ProductEntity?>(null) }
     var showCustomizeDialog by remember { mutableStateOf(false) }
+    val responsiveInfo = rememberResponsiveInfo()
+    val compact = responsiveInfo.isPhone
 
     Scaffold(
         topBar = {
@@ -96,7 +100,7 @@ fun InventoryScreen(
                 .fillMaxSize()
                 .background(backgroundColor)
                 .padding(padding)
-                .padding(16.dp)
+                .padding(if (compact) 10.dp else 16.dp)
         ) {
             // Low stock warning
             if (lowStockProducts.isNotEmpty()) {
@@ -140,7 +144,8 @@ fun InventoryScreen(
                             onToggle = { onToggleAvailability(product) },
                             onRestock = { onRestock(product.id, it) },
                             onDelete = { onDelete(product) },
-                            onEdit = { showEditDialog = product }
+                            onEdit = { showEditDialog = product },
+                            compact = compact
                         )
                     }
                 }
@@ -196,7 +201,8 @@ fun ProductInventoryCard(
     onToggle: () -> Unit,
     onRestock: (Int) -> Unit,
     onDelete: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    compact: Boolean = false
 ) {
     var showRestock by remember { mutableStateOf(false) }
     var restockAmount by remember { mutableStateOf("10") }
@@ -210,52 +216,68 @@ fun ProductInventoryCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = product.name,
-                        fontWeight = FontWeight.Bold,
-                        color = if (product.isAvailable) darkText else Color.Gray,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "$currency${product.price}",
-                        color = accentRed
-                    )
-                    if (isLowStock) {
-                        Text(
-                            text = "Low stock: ${product.stockQuantity}",
-                            color = Color.Red,
-                            fontWeight = FontWeight.Bold
-                        )
-                    } else {
-                        Text(
-                            text = "Stock: ${product.stockQuantity}",
-                            color = Color.Gray
-                        )
-                    }
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
+        Column(
+            modifier = Modifier.padding(if (compact) 12.dp else 16.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 0.dp)
+        ) {
+            if (compact) {
+                ProductInventoryInfo(
+                    product = product,
+                    currency = currency,
+                    isLowStock = isLowStock,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Switch(
                         checked = product.isAvailable,
                         onCheckedChange = { onToggle() }
                     )
-                    if (product.isAvailable) {
-                        TextButton(onClick = { showRestock = true }) {
-                            Text("Restock", color = accentRed)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (product.isAvailable) {
+                            TextButton(onClick = { showRestock = true }) {
+                                Text("Restock", color = accentRed)
+                            }
+                        }
+                        IconButton(onClick = onEdit) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = accentRed)
+                        }
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
                         }
                     }
-                    IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = accentRed)
-                    }
-                    IconButton(onClick = { showDeleteConfirm = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ProductInventoryInfo(
+                        product = product,
+                        currency = currency,
+                        isLowStock = isLowStock
+                    )
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Switch(
+                            checked = product.isAvailable,
+                            onCheckedChange = { onToggle() }
+                        )
+                        if (product.isAvailable) {
+                            TextButton(onClick = { showRestock = true }) {
+                                Text("Restock", color = accentRed)
+                            }
+                        }
+                        IconButton(onClick = onEdit) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = accentRed)
+                        }
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                        }
                     }
                 }
             }
@@ -312,6 +334,41 @@ fun ProductInventoryCard(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun ProductInventoryInfo(
+    product: ProductEntity,
+    currency: String,
+    isLowStock: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = product.name,
+            fontWeight = FontWeight.Bold,
+            color = if (product.isAvailable) darkText else Color.Gray,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = "$currency${product.price}",
+            color = accentRed
+        )
+        if (isLowStock) {
+            Text(
+                text = "Low stock: ${product.stockQuantity}",
+                color = Color.Red,
+                fontWeight = FontWeight.Bold
+            )
+        } else {
+            Text(
+                text = "Stock: ${product.stockQuantity}",
+                color = Color.Gray
+            )
+        }
     }
 }
 
@@ -513,7 +570,9 @@ fun StepCard(
                         Text(
                             text = option,
                             color = darkText,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                     Row(
@@ -597,7 +656,9 @@ fun AddOnItem(
             Text(
                 text = name,
                 color = darkText,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
         }
         Row(
@@ -654,6 +715,8 @@ fun CustomizeDialog(
 ) {
     var editingOption by remember { mutableStateOf<Pair<String, String>?>(null) } // (stepName, optionName)
     var showEditPriceDialog by remember { mutableStateOf(false) }
+    val responsiveInfo = rememberResponsiveInfo()
+    val compact = responsiveInfo.isPhone
     
     Box(
         modifier = Modifier
@@ -678,7 +741,7 @@ fun CustomizeDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(accentRed)
-                        .padding(16.dp),
+                        .padding(if (compact) 12.dp else 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -686,7 +749,7 @@ fun CustomizeDialog(
                         "Customize Products",
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
-                        style = MaterialTheme.typography.headlineSmall
+                        style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall
                     )
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
@@ -697,13 +760,16 @@ fun CustomizeDialog(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .padding(
+                            horizontal = if (compact) 12.dp else 24.dp,
+                            vertical = if (compact) 12.dp else 16.dp
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 16.dp)
                 ) {
                     item {
                         Text(
                             text = "Build Your Perfect Burrito",
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = darkText,
                             modifier = Modifier.fillMaxWidth(),
@@ -711,7 +777,7 @@ fun CustomizeDialog(
                         )
                         Text(
                             text = "Manage customization options",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
                             color = accentRed,
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Center

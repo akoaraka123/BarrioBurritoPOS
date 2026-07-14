@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.example.barrioburritopos.data.local.entity.OrderEntity
 import com.example.barrioburritopos.data.local.entity.OrderItemEntity
 import com.example.barrioburritopos.domain.model.DailyReport
+import com.example.barrioburritopos.ui.responsive.rememberResponsiveInfo
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -41,6 +42,8 @@ fun ReportsScreen(
     var showTransactionsDialog by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf("") }
     var viewingOrderId by remember { mutableStateOf<Long?>(null) }
+    val responsiveInfo = rememberResponsiveInfo()
+    val compact = responsiveInfo.isPhone
 
     Scaffold(
         topBar = {
@@ -55,7 +58,7 @@ fun ReportsScreen(
                 .fillMaxSize()
                 .background(backgroundColor)
                 .padding(padding)
-                .padding(16.dp)
+                .padding(if (compact) 10.dp else 16.dp)
         ) {
             if (dailyReports.isEmpty()) {
                 Box(
@@ -72,6 +75,7 @@ fun ReportsScreen(
                         DailyReportCard(
                             dailyReport = dailyReport,
                             currency = currency,
+                            compact = compact,
                             onViewTransactions = {
                                 selectedDate = dailyReport.date
                                 showTransactionsDialog = true
@@ -113,19 +117,16 @@ fun ReportsScreen(
 fun DailyReportCard(
     dailyReport: DailyReportWithDate,
     currency: String,
-    onViewTransactions: () -> Unit
+    onViewTransactions: () -> Unit,
+    compact: Boolean = false
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = cardColor),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(modifier = Modifier.padding(if (compact) 12.dp else 16.dp)) {
+            if (compact) {
                 Text(
                     text = dailyReport.date,
                     fontWeight = FontWeight.Bold,
@@ -134,57 +135,35 @@ fun DailyReportCard(
                 )
                 Button(
                     onClick = onViewTransactions,
-                    colors = ButtonDefaults.buttonColors(containerColor = accentRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = accentRed),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("View Transactions")
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = dailyReport.date,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = darkText
+                    )
+                    Button(
+                        onClick = onViewTransactions,
+                        colors = ButtonDefaults.buttonColors(containerColor = accentRed)
+                    ) {
+                        Text("View Transactions")
+                    }
                 }
             }
 
             Spacer(Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MiniSummaryCard(
-                    title = "Total Sales",
-                    value = currency + "%.2f".format(dailyReport.report.totalSales),
-                    color = accentRed,
-                    modifier = Modifier.weight(1f)
-                )
-                MiniSummaryCard(
-                    title = "Orders",
-                    value = "${dailyReport.report.totalOrders}",
-                    color = accentYellow,
-                    modifier = Modifier.weight(1f)
-                )
-                MiniSummaryCard(
-                    title = "Items Sold",
-                    value = "${dailyReport.report.totalItemsSold}",
-                    color = Color(0xFF9C27B0),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MiniSummaryCard(
-                    title = "Cash Sales",
-                    value = currency + "%.2f".format(dailyReport.report.cashSales),
-                    color = Color(0xFF2E7D32),
-                    modifier = Modifier.weight(1f)
-                )
-                MiniSummaryCard(
-                    title = "GCash Sales",
-                    value = currency + "%.2f".format(dailyReport.report.gcashSales),
-                    color = Color(0xFF0077B6),
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            ReportSummaryCards(dailyReport = dailyReport, currency = currency, compact = compact)
 
             if (dailyReport.report.bestSellers.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
@@ -205,6 +184,97 @@ fun DailyReportCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ReportSummaryCards(
+    dailyReport: DailyReportWithDate,
+    currency: String,
+    compact: Boolean
+) {
+    if (compact) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            MiniSummaryCard(
+                title = "Total Sales",
+                value = currency + "%.2f".format(dailyReport.report.totalSales),
+                color = accentRed,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MiniSummaryCard(
+                    title = "Orders",
+                    value = "${dailyReport.report.totalOrders}",
+                    color = accentYellow,
+                    modifier = Modifier.weight(1f)
+                )
+                MiniSummaryCard(
+                    title = "Items Sold",
+                    value = "${dailyReport.report.totalItemsSold}",
+                    color = Color(0xFF9C27B0),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            MiniSummaryCard(
+                title = "Cash Sales",
+                value = currency + "%.2f".format(dailyReport.report.cashSales),
+                color = Color(0xFF2E7D32),
+                modifier = Modifier.fillMaxWidth()
+            )
+            MiniSummaryCard(
+                title = "GCash Sales",
+                value = currency + "%.2f".format(dailyReport.report.gcashSales),
+                color = Color(0xFF0077B6),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            MiniSummaryCard(
+                title = "Total Sales",
+                value = currency + "%.2f".format(dailyReport.report.totalSales),
+                color = accentRed,
+                modifier = Modifier.weight(1f)
+            )
+            MiniSummaryCard(
+                title = "Orders",
+                value = "${dailyReport.report.totalOrders}",
+                color = accentYellow,
+                modifier = Modifier.weight(1f)
+            )
+            MiniSummaryCard(
+                title = "Items Sold",
+                value = "${dailyReport.report.totalItemsSold}",
+                color = Color(0xFF9C27B0),
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            MiniSummaryCard(
+                title = "Cash Sales",
+                value = currency + "%.2f".format(dailyReport.report.cashSales),
+                color = Color(0xFF2E7D32),
+                modifier = Modifier.weight(1f)
+            )
+            MiniSummaryCard(
+                title = "GCash Sales",
+                value = currency + "%.2f".format(dailyReport.report.gcashSales),
+                color = Color(0xFF0077B6),
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

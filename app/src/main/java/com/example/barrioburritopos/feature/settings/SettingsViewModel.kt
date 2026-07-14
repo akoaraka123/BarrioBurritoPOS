@@ -25,6 +25,8 @@ class SettingsViewModel(
     private val LOW_STOCK_THRESHOLD = intPreferencesKey("low_stock_threshold")
     private val PIN = stringPreferencesKey("pin")
     private val CUSTOM_BURRITO_BASE_PRICE = doublePreferencesKey("custom_burrito_base_price")
+    private val SELECTED_PRINTER_NAME = stringPreferencesKey("selected_printer_name")
+    private val SELECTED_PRINTER_ADDRESS = stringPreferencesKey("selected_printer_address")
 
     val businessName: StateFlow<String> = dataStore.data
         .map { it[BUSINESS_NAME] ?: "Barrio Burrito" }
@@ -45,6 +47,14 @@ class SettingsViewModel(
     val customBurritoBasePrice: StateFlow<Double> = dataStore.data
         .map { it[CUSTOM_BURRITO_BASE_PRICE] ?: 130.0 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 130.0)
+
+    val selectedPrinterName: StateFlow<String?> = dataStore.data
+        .map { it[SELECTED_PRINTER_NAME] }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val selectedPrinterAddress: StateFlow<String?> = dataStore.data
+        .map { it[SELECTED_PRINTER_ADDRESS] }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun setBusinessName(name: String) {
         viewModelScope.launch {
@@ -83,6 +93,15 @@ class SettingsViewModel(
     fun setCustomBurritoBasePrice(price: Double) {
         viewModelScope.launch {
             dataStore.edit { it[CUSTOM_BURRITO_BASE_PRICE] = price }
+        }
+    }
+
+    fun setSelectedPrinter(name: String, address: String) {
+        viewModelScope.launch {
+            dataStore.edit {
+                it[SELECTED_PRINTER_NAME] = name
+                it[SELECTED_PRINTER_ADDRESS] = address
+            }
         }
     }
 

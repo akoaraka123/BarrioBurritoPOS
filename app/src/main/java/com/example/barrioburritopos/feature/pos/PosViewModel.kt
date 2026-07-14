@@ -229,7 +229,7 @@ class PosViewModel(
 
             try {
                 // Save order and items
-                orderRepo.createOrder(order, orderItems)
+                val orderId = orderRepo.createOrder(order, orderItems)
 
                 // Decrease stock (skip for custom burritos with -1L product ID)
                 for (item in items) {
@@ -237,9 +237,28 @@ class PosViewModel(
                     productRepo.decrementStock(item.productId, item.quantity)
                 }
 
+                val receiptData = ReceiptData(
+                    orderId = orderId,
+                    dateTime = now,
+                    cashierName = "Soykier",
+                    paymentMethod = method.name,
+                    amountReceived = receivedAmount ?: totalAmount,
+                    changeAmount = changeAmount,
+                    totalAmount = totalAmount,
+                    items = items.map {
+                        ReceiptLineItem(
+                            name = it.name,
+                            quantity = it.quantity,
+                            unitPrice = it.price,
+                            subtotal = it.subtotal,
+                            details = it.details
+                        )
+                    }
+                )
+
                 // Clear cart
                 clearCart()
-                _checkoutStatus.value = CheckoutStatus.Success(changeAmount)
+                _checkoutStatus.value = CheckoutStatus.Success(receiptData)
             } catch (e: Exception) {
                 _checkoutStatus.value = CheckoutStatus.Error(e.message ?: "Checkout failed")
             }
@@ -263,6 +282,6 @@ class PosViewModel(
 }
 
 sealed class CheckoutStatus {
-    data class Success(val change: Double) : CheckoutStatus()
+    data class Success(val receipt: ReceiptData) : CheckoutStatus()
     data class Error(val message: String) : CheckoutStatus()
 }

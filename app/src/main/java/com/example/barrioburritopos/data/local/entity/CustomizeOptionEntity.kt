@@ -1,9 +1,15 @@
 package com.example.barrioburritopos.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "customize_options")
+@Entity(
+    tableName = "customize_options",
+    indices = [
+        Index(value = ["stepType", "name"], unique = true)
+    ]
+)
 data class CustomizeOptionEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

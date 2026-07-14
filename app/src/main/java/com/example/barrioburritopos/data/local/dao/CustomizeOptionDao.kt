@@ -2,6 +2,7 @@ package com.example.barrioburritopos.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Delete
@@ -17,10 +18,10 @@ interface CustomizeOptionDao {
     @Query("SELECT COUNT(*) FROM customize_options")
     suspend fun countAll(): Int
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(option: CustomizeOptionEntity): Long
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(options: List<CustomizeOptionEntity>)
 
     @Update

@@ -28,6 +28,10 @@ class CustomizeOptionRepository(
         price: Double,
         sourceImageUri: String?
     ): Long {
+        val trimmedName = name.trim()
+        if (dao.getByNameAndStepType(trimmedName, stepType.name) != null) {
+            return -1
+        }
         val imagePath = sourceImageUri?.let { 
             if (it.startsWith("drawable://")) {
                 // Store drawable resource name as-is
@@ -40,7 +44,7 @@ class CustomizeOptionRepository(
         return dao.insert(
             CustomizeOptionEntity(
                 stepType = stepType.name,
-                name = name.trim(),
+                name = trimmedName,
                 price = price,
                 imageUri = imagePath,
                 isDefault = false

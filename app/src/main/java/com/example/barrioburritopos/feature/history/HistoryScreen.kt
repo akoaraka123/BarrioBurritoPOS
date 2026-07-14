@@ -21,9 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.barrioburritopos.data.local.entity.OrderItemEntity
 import com.example.barrioburritopos.domain.model.Transaction
+import com.example.barrioburritopos.ui.responsive.rememberResponsiveInfo
 
 val backgroundColor = Color(0xFFFFF8F0)
 val cardColor = Color(0xFFFFE8CC)
@@ -45,6 +47,8 @@ fun HistoryScreen(
     var editingItems by remember { mutableStateOf<List<OrderItemEntity>>(emptyList()) }
     var isLocked by remember { mutableStateOf(true) }
     var viewingOrderId by remember { mutableStateOf<Long?>(null) }
+    val responsiveInfo = rememberResponsiveInfo()
+    val compact = responsiveInfo.isPhone
     Scaffold(
         topBar = {
             TopAppBar(
@@ -67,7 +71,7 @@ fun HistoryScreen(
                 .fillMaxSize()
                 .background(backgroundColor)
                 .padding(padding)
-                .padding(16.dp)
+                .padding(if (compact) 10.dp else 16.dp)
         ) {
             // Search bar
             OutlinedTextField(
@@ -114,7 +118,8 @@ fun HistoryScreen(
                                 editingOrderId = tx.id
                                 editingItems = tx.items
                             },
-                            onDeleteOrder = { onDeleteOrder(tx.id) }
+                            onDeleteOrder = { onDeleteOrder(tx.id) },
+                            compact = compact
                         )
                     }
                 }
@@ -155,7 +160,8 @@ fun TransactionCard(
     isLocked: Boolean,
     onViewOrder: () -> Unit = {},
     onEditOrder: () -> Unit = {},
-    onDeleteOrder: () -> Unit = {}
+    onDeleteOrder: () -> Unit = {},
+    compact: Boolean = false
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -165,12 +171,8 @@ fun TransactionCard(
         colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(modifier = Modifier.padding(if (compact) 12.dp else 16.dp)) {
+            if (compact) {
                 Text(
                     text = "Order #${tx.id}",
                     fontWeight = FontWeight.Bold,
@@ -178,24 +180,49 @@ fun TransactionCard(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.clickable { onViewOrder() }
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = tx.dateTimeFormatted,
                         color = Color(0xFF666666),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.width(8.dp))
-                    IconButton(onClick = onEditOrder) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = accentRed)
-                    }
-                    IconButton(
-                        onClick = { showDeleteConfirm = true },
-                        enabled = !isLocked
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = if (isLocked) Color.Gray else Color.Red
+                    OrderActionButtons(
+                        isLocked = isLocked,
+                        onEditOrder = onEditOrder,
+                        onDeleteClick = { showDeleteConfirm = true }
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Order #${tx.id}",
+                        fontWeight = FontWeight.Bold,
+                        color = darkText,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.clickable { onViewOrder() }
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = tx.dateTimeFormatted,
+                            color = Color(0xFF666666),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        OrderActionButtons(
+                            isLocked = isLocked,
+                            onEditOrder = onEditOrder,
+                            onDeleteClick = { showDeleteConfirm = true }
                         )
                     }
                 }
@@ -314,6 +341,29 @@ fun TransactionCard(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun OrderActionButtons(
+    isLocked: Boolean,
+    onEditOrder: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onEditOrder) {
+            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = accentRed)
+        }
+        IconButton(
+            onClick = onDeleteClick,
+            enabled = !isLocked
+        ) {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = "Delete",
+                tint = if (isLocked) Color.Gray else Color.Red
+            )
+        }
     }
 }
 

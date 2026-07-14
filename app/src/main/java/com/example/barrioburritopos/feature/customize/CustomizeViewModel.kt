@@ -215,9 +215,14 @@ class CustomizeViewModel(
             return
         }
         viewModelScope.launch {
-            repository.addOption(stepType, name, price, imageUri)
-            _message.emit("Option added successfully.")
-            onResult(true)
+            val insertedId = repository.addOption(stepType, name, price, imageUri)
+            if (insertedId == -1L) {
+                _message.emit("Option already exists in this step.")
+                onResult(false)
+            } else {
+                _message.emit("Option added successfully.")
+                onResult(true)
+            }
         }
     }
 
